@@ -163,41 +163,139 @@
     var p = e.payload || {};
     var card = document.querySelector('[data-module="' + (p.tool || "") + '"]');
     if (!card) return;
-    var statusEl = card.querySelector(".module-status");
-    var durEl = card.querySelector(".module-duration");
+    var statusEl = card.querySelector("[data-mod-status]") || card.querySelector(".module-status");
+    var extraEl = card.querySelector("[data-mod-extra]");
+    var barEl = card.querySelector("[data-mod-bar]");
     if (!statusEl) return;
+    var states = { tool_started: "running", tool_completed: "done", tool_failed: "failed" };
+    var st = states[e.type];
+    if (!st) return;
+    // hapus state lama, set baru
+    ["is-running", "is-done", "is-failed"].forEach(function (c) { card.classList.remove(c); });
+    card.classList.add("is-" + st);
+    statusEl.className = "module-status " + st;
+    statusEl.textContent = st === "running" ? "RUNNING" : st === "done" ? "DONE" : "FAILED";
     if (e.type === "tool_started") {
-      statusEl.className = "module-status running";
-      statusEl.textContent = "RUNNING";
-      if (durEl) durEl.textContent = "--";
+      if (extraEl) extraEl.textContent = "running…";
+      if (barEl) barEl.style.width = "0%";
     } else if (e.type === "tool_completed") {
-      statusEl.className = "module-status done";
-      statusEl.textContent = "DONE";
-      if (durEl && p.elapsed_ms != null) durEl.textContent = (p.elapsed_ms / 1000).toFixed(1) + "s";
+      var secs = p.elapsed_ms != null ? (p.elapsed_ms / 1000).toFixed(1) + "s" : "?";
+      var recs = p.record_count != null ? " · " + p.record_count + " rec" : "";
+      if (extraEl) extraEl.textContent = secs + recs;
+      if (barEl) barEl.style.width = "100%";
     } else if (e.type === "tool_failed") {
-      statusEl.className = "module-status failed";
-      statusEl.textContent = "FAILED";
+      if (extraEl) extraEl.textContent = (p.error || "failed").slice(0, 40);
+      if (barEl) barEl.style.width = "100%";
+    }
+    // fallback elemen lama (module-row: durasi)
+    var durEl = card.querySelector(".module-duration");
+    if (durEl && e.type === "tool_completed" && p.elapsed_ms != null) {
+      durEl.textContent = (p.elapsed_ms / 1000).toFixed(1) + "s";
     }
   }
-  /* stepper halaman run: fase aktif highlight sesuai event */
+  /* stepper halaman run: fase aktif highlight + durasi + status text */
+  var phaseStartTs = {}; // phase -> timestamp event phase_started (ms)
+  function fmtDur(ms) {
+    var s = Math.max(0, Math.round(ms / 1000));
+    var m = Math.floor(s / 60);
+    return m + "m " + String(s % 60).padStart(2, "0") + "s";
+  }
   function stepperUpdate(e) {
     var steps = document.querySelectorAll(".stepper .step[data-phase]");
     if (!steps.length) return;
-    var idx = -1;
+    var ts = e.created_at ? new Date(e.created_at + "Z").getTime() : Date.now();
+    if (isNaN(ts)) ts = Date.now();
     if (e.type === "phase_started") {
+      phaseStartTs[e.phase] = ts;
+      var idx = -1;
       steps.forEach(function (s, i) {
-        s.classList.toggle("active", s.dataset.phase === e.phase);
         if (s.dataset.phase === e.phase) idx = i;
       });
-      steps.forEach(function (s, i) { if (i < idx) s.classList.add("done"); });
+      steps.forEach(function (s, i) {
+        if (i < idx) {
+          s.classList.remove("running", "pending");
+          s.classList.add("completed");
+          var stt = s.querySelector("[data-step-status]");
+          if (stt && stt.textContent === "PENDING") stt.textContent = "✓ COMPLETED";
+          var tim = s.querySelector("[data-step-time]");
+          if (tim && tim.textContent === "--") tim.textContent = "skipped";
+        } else if (i === idx) {
+          s.classList.remove("completed", "pending");
+          s.classList.add("running");
+          var st2 = s.querySelector("[data-step-status]");
+          if (st2) st2.textContent = "◌ RUNNING";
+        }
+      });
     } else if (e.type === "phase_complete") {
       steps.forEach(function (s) {
-        if (s.dataset.phase === e.phase) { s.classList.remove("active"); s.classList.add("done"); }
+        if (s.dataset.phase === e.phase) {
+          s.classList.remove("running", "pending");
+          s.classList.add("completed");
+          var st = s.querySelector("[data-step-status]");
+          if (st) st.textContent = "✓ COMPLETED";
+          var tim = s.querySelector("[data-step-time]");
+          if (tim) {
+            var started = phaseStartTs[e.phase];
+            tim.textContent = started ? fmtDur(ts - started) : "--";
+          }
+        }
       });
     } else if (e.type === "run_completed" || e.type === "run_stopped") {
-      steps.forEach(function (s) { s.classList.remove("active"); });
+      steps.forEach(function (s) {
+        if (s.classList.contains("running")) {
+          s.classList.remove("running");
+          s.classList.add("pending");
+          var st = s.querySelector("[data-step-status]");
+          if (st) st.textContent = "PENDING";
+        }
+      });
     }
   }
+  /* ops-meta halaman run: progress %, current module, elapsed, tasks */
+  var runMeta = null;
+  function initRunMeta(runId) {
+    runMeta = {
+      phasesTotal: document.querySelectorAll(".stepper .step[data-phase]").length,
+      phasesDone: 0,
+      toolDone: 0,
+      toolTotal: 0,
+      currentTool: "--",
+      startTs: null,
+      timerEl: document.querySelector("[data-elapsed]"),
+    };
+  }
+  function opsMetaUpdate(e) {
+    if (!runMeta) return;
+    var ts = e.created_at ? new Date(e.created_at + "Z").getTime() : Date.now();
+    if (isNaN(ts)) ts = Date.now();
+    if (e.type === "run_started") runMeta.startTs = ts;
+    if (e.type === "phase_complete") runMeta.phasesDone++;
+    if (e.type === "tool_started") { runMeta.toolTotal++; runMeta.currentTool = (e.payload || {}).tool || runMeta.currentTool; }
+    if (e.type === "tool_completed" || e.type === "tool_failed" || e.type === "tool_skipped") runMeta.toolDone++;
+
+    var bar = document.querySelector("[data-progress-bar]");
+    var pct = document.querySelector("[data-progress-pct]");
+    if (bar && pct && runMeta.phasesTotal) {
+      var p = Math.round((runMeta.phasesDone / runMeta.phasesTotal) * 100);
+      bar.style.width = p + "%";
+      pct.textContent = p + "%";
+    }
+    var cur = document.querySelector("[data-current-module]");
+    if (cur && runMeta.currentTool) cur.textContent = runMeta.currentTool;
+    var td = document.querySelector("[data-tasks-done]");
+    if (td) td.textContent = runMeta.toolDone + " / " + runMeta.toolTotal;
+  }
+  var elapsedTimer = null;
+  function startElapsed() {
+    if (elapsedTimer || !runMeta || !runMeta.startTs || !runMeta.timerEl) return;
+    var el = runMeta.timerEl;
+    elapsedTimer = setInterval(function () {
+      var s = Math.max(0, Math.floor((Date.now() - runMeta.startTs) / 1000));
+      var h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), ss = s % 60;
+      el.textContent = (h > 0 ? h + "h " : "") + m + "m " + String(ss).padStart(2, "0") + "s";
+    }, 1000);
+  }
+  function stopElapsed() { if (elapsedTimer) { clearInterval(elapsedTimer); elapsedTimer = null; } }
   /* badge status di halaman run */
   function statusBadgeUpdate(e) {
     var badge = document.querySelector(".page-head .sev");
@@ -214,6 +312,7 @@
       var runId = term.dataset.runId;
       var lastEventId = 0;
       var pollMs = 2000; // polling 2s (PROMPT.md: 1-2s cukup utk demo)
+      if (document.querySelector("[data-progress-bar]")) initRunMeta(runId);
 
       function tick() {
         fetch("/api/stream.php?run_id=" + encodeURIComponent(runId) + "&after=" + lastEventId)
@@ -229,11 +328,14 @@
               moduleCardUpdate(e);
               stepperUpdate(e);
               statusBadgeUpdate(e);
+              opsMetaUpdate(e);
+              startElapsed();
               if (e.type === "confirmation_required") {
                 window.dispatchEvent(new CustomEvent("oges:confirmation_required", { detail: e }));
               }
               if (e.type === "run_completed" || e.type === "run_stopped") {
                 window.dispatchEvent(new CustomEvent("oges:" + e.type, { detail: e }));
+                stopElapsed();
               }
             });
             if (term.childElementCount > 300) {

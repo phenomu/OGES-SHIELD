@@ -95,10 +95,27 @@ final class RunController
         }
         // phases snapshot utk stepper + tool pool utk module pipeline
         $phases = json_decode((string) ($run['template_phases'] ?? ''), true) ?: [];
+
+        // daftar tool dari tools.json (sumber sama dgn orchestrator) — module pipeline dinamis
+        $tools = [];
+        $tj = json_decode((string) @file_get_contents(BASE_PATH . '/orchestrator/config/tools.json'), true);
+        if (is_array($tj) && isset($tj['tools']) && is_array($tj['tools'])) {
+            foreach ($tj['tools'] as $t) {
+                if (!is_array($t) || !($t['enabled'] ?? false)) {
+                    continue;
+                }
+                $tools[] = [
+                    'id'   => (string) ($t['id'] ?? ''),
+                    'name' => (string) ($t['name'] ?? $t['id'] ?? ''),
+                    'risk' => (string) ($t['risk_level'] ?? 'safe'),
+                ];
+            }
+        }
         View::page('run', [
             'run'         => $run,
             'runId'       => $runId,
             'phases'      => $phases,
+            'tools'       => $tools,
         ]);
     }
 

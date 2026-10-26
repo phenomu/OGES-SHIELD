@@ -1,7 +1,8 @@
 <?php
 /**
- * run.php — halaman live run (Phase 3): event real-time via /api/stream.php.
- * Stepper = phases dari run; terminal = event asli orchestrator.
+ * run.php — halaman live run (Phase 4): event real-time via /api/stream.php.
+ * Stepper dashboard-style (circle, label, durasi, status) + ops-meta live
+ * (progress, current module, elapsed, completed tasks) + module pipeline baru.
  */
 View::$pageTitle = 'Live Run — OGES-SHIELD';
 View::$activeNav = 'workflows';
@@ -9,7 +10,10 @@ View::$activeNav = 'workflows';
 /** @var array $run */
 /** @var string $runId */
 /** @var array $phases */
+/** @var array $tools */
 $phases = $phases ?: [];
+$tools  = $tools ?: [];
+
 $statusBadge = fn(string $s) => match ($s) {
     'pending'   => '<span class="sev sev-medium">PENDING</span>',
     'running'   => '<span class="sev sev-info">RUNNING</span>',
@@ -18,6 +22,17 @@ $statusBadge = fn(string $s) => match ($s) {
     'failed'    => '<span class="sev sev-critical">FAILED</span>',
     'stopped'   => '<span class="sev sev-medium">STOPPED</span>',
     default     => '<span class="sev sev-info">' . strtoupper($s) . '</span>',
+};
+$labelFor = fn(string $p) => match ($p) {
+    'scope_validation'        => 'Scope Validation',
+    'reconnaissance'          => 'Reconnaissance',
+    'service_enumeration'     => 'Service Enumeration',
+    'vulnerability_assessment' => 'Vulnerability Assess.',
+    'exploitation_validation' => 'Exploitation Validation',
+    'persistence_simulation'  => 'Persistence Simulation',
+    'cleanup_verification'    => 'Cleanup & Verification',
+    'report_generation'       => 'Report Generation',
+    default                   => str_replace('_', ' ', $p),
 };
 ?>
 <div class="page-head">
@@ -35,12 +50,56 @@ $statusBadge = fn(string $s) => match ($s) {
   </div>
 </div>
 
+<section class="panel">
+  <div class="panel-head">
+    <div>
+      <h2 class="panel-title">Operations Overview</h2>
+      <p class="panel-subtitle"><?= e($run['template_name']) ?> — <?= e($run['target_value']) ?></p>
+    </div>
+    <span class="badge badge-cyan"><span class="dot"></span><?= strtoupper((string) $run['status']) ?></span>
+  </div>
+
+  <div class="stepper run-stepper" style="grid-template-columns: repeat(<?= count($phases) ?: 1 ?>, 1fr)">
+    <?php foreach ($phases as $i => $ph): ?>
+      <div class="step<?= $i === 0 ? ' running' : '' ?>" data-phase="<?= e($ph) ?>">
+        <span class="step-circle"><?= str_pad((string) ($i + 1), 2, '0', STR_PAD_LEFT) ?></span>
+        <span class="step-label"><?= e($labelFor($ph)) ?></span>
+        <span class="step-time" data-step-time>--</span>
+        <span class="step-status" data-step-status>PENDING</span>
+      </div>
+    <?php endforeach; ?>
+    <?php if (!$phases): ?>
+      <p class="form-hint">Template run tidak punya phases.</p>
+    <?php endif; ?>
+  </div>
+
+  <div class="ops-meta">
+    <div class="ops-meta-item" style="flex:1;min-width:160px">
+      <span class="ops-meta-label">OVERALL PROGRESS</span>
+      <div class="progressbar mt-3"><div class="bar" style="width:0%" data-progress-bar></div></div>
+      <span class="ops-meta-value" data-progress-pct>0%</span>
+    </div>
+    <div class="ops-meta-item">
+      <span class="ops-meta-label">CURRENT MODULE</span>
+      <span class="ops-meta-value mono" data-current-module>--</span>
+    </div>
+    <div class="ops-meta-item">
+      <span class="ops-meta-label">ELAPSED TIME</span>
+      <span class="ops-meta-value" data-elapsed="0">0m 00s</span>
+    </div>
+    <div class="ops-meta-item">
+      <span class="ops-meta-label">COMPLETED TASKS</span>
+      <span class="ops-meta-value mono" data-tasks-done>0 / 0</span>
+    </div>
+  </div>
+</section>
+
 <div class="grid-mid">
   <section class="panel">
     <div class="panel-head">
       <div>
         <h2 class="panel-title">Run Info</h2>
-        <p class="panel-subtitle"><?= e($run['template_name']) ?></p>
+        <p class="panel-subtitle">Detail engagement</p>
       </div>
     </div>
     <div class="fd-fields">
@@ -49,57 +108,54 @@ $statusBadge = fn(string $s) => match ($s) {
       <div class="fd-field"><span class="fd-label">TEMPLATE</span><span class="fd-value mono"><?= e($run['template_slug']) ?></span></div>
       <div class="fd-field"><span class="fd-label">CREATED BY</span><span class="fd-value mono"><?= e($run['created_by_username']) ?></span></div>
       <div class="fd-field"><span class="fd-label">CREATED AT</span><span class="fd-value mono"><?= e((string) $run['created_at']) ?></span></div>
-      <div class="fd-field"><span class="fd-label">STATUS</span><span class="fd-value"><?= $statusBadge((string) $run['status']) ?></span></div>
     </div>
   </section>
 
   <section class="panel">
     <div class="panel-head">
       <div>
-        <h2 class="panel-title">Phase Progress</h2>
-        <p class="panel-subtitle"><?= count($phases) ?> phase workflow</p>
+        <h2 class="panel-title">Execution Logs</h2>
+        <p class="panel-subtitle">Event asli orchestrator — polling 2s</p>
+      </div>
+      <div style="display:flex; gap: var(--sp-2)">
+        <button type="button" class="btn" data-term-toggle="runlog">Live Logs: ON</button>
+        <button type="button" class="btn" data-term-clear="runlog">Clear</button>
       </div>
     </div>
-    <ol class="stepper" style="--steps:<?= count($phases) ?: 1 ?>">
-      <?php foreach ($phases as $i => $ph): ?>
-        <li class="step<?= $i === 0 ? ' active' : '' ?>" data-phase="<?= e($ph) ?>">
-          <span class="step-dot"><?= str_pad((string) ($i + 1), 2, '0', STR_PAD_LEFT) ?></span>
-          <span class="step-label"><?= e(str_replace('_', ' ', $ph)) ?></span>
-        </li>
-      <?php endforeach; ?>
-    </ol>
-    <p class="form-hint mt-3">Status phase diperbarui real-time dari event orchestrator.</p>
+    <div class="terminal" data-terminal="runlog" data-run-id="<?= e($runId) ?>">
+      <div class="term-line"><span class="term-time">--:--:--</span><span class="term-lv lv-info">INFO</span><span class="term-msg">menyambung ke stream run...</span></div>
+    </div>
   </section>
 </div>
 
 <section class="panel mt-4">
   <div class="panel-head">
     <div>
-      <h2 class="panel-title">Execution Logs</h2>
-      <p class="panel-subtitle">Event asli dari orchestrator — polling /api/stream.php</p>
-    </div>
-    <div style="display:flex; gap: var(--sp-2)">
-      <button type="button" class="btn" data-term-toggle="runlog">Live Logs: ON</button>
-      <button type="button" class="btn" data-term-clear="runlog">Clear</button>
-    </div>
-  </div>
-  <div class="terminal" data-terminal="runlog" data-run-id="<?= e($runId) ?>">
-    <div class="term-line"><span class="term-time">--:--:--</span><span class="term-lv lv-info">INFO</span><span class="term-msg">menyambung ke stream run...</span></div>
-  </div>
-</section>
-
-<section class="panel mt-4">
-  <div class="panel-head">
-    <div>
       <h2 class="panel-title">Module Pipeline</h2>
-      <p class="panel-subtitle">Kartu berubah status mengikuti event tool_started/completed</p>
+      <p class="panel-subtitle">Tool enabled dari registry — status &amp; durasi live mengikuti event</p>
     </div>
+    <span class="badge"><span class="dot"></span><?= count($tools) ?> MODULES</span>
   </div>
   <div class="module-grid">
-    <div class="module-row" data-module="subfinder"><span class="module-name">subfinder</span><span class="module-status pending">PENDING</span><span class="module-duration">--</span></div>
-    <div class="module-row" data-module="httpx"><span class="module-name">httpx</span><span class="module-status pending">PENDING</span><span class="module-duration">--</span></div>
-    <div class="module-row" data-module="nuclei"><span class="module-name">nuclei</span><span class="module-status pending">PENDING</span><span class="module-duration">--</span></div>
-    <div class="module-row" data-module="custom_sqli_probe"><span class="module-name">custom_sqli_probe</span><span class="module-status pending">PENDING</span><span class="module-duration">--</span></div>
+    <?php foreach ($tools as $m): ?>
+      <div class="mod-card" data-module="<?= e($m['id']) ?>">
+        <div class="mod-head">
+          <span class="mod-name"><?= e($m['name']) ?></span>
+          <span class="module-status pending" data-mod-status>PENDING</span>
+        </div>
+        <div class="mod-bar"><div class="bar" data-mod-bar></div></div>
+        <div class="mod-meta">
+          <span class="mono mod-risk risk-<?= e($m['risk']) ?>"><?= strtoupper($m['risk']) ?></span>
+          <span class="mono text-faint" data-mod-extra>--</span>
+        </div>
+      </div>
+    <?php endforeach; ?>
+    <?php if (!$tools): ?>
+      <div class="empty-state" style="grid-column:1/-1">
+        <div class="es-title">Tidak ada tool enabled</div>
+        <div class="es-desc">Aktifkan tool di Admin → Tool Registry.</div>
+      </div>
+    <?php endif; ?>
   </div>
 </section>
 
@@ -149,7 +205,6 @@ $statusBadge = fn(string $s) => match ($s) {
     if (btnC) btnC.addEventListener("click", function () { sendConfirm(true); });
     if (btnR) btnR.addEventListener("click", function () { sendConfirm(false); });
   });
-  // modal auto-open saat event confirmation_required masuk (hook dari app.js)
   window.addEventListener("oges:confirmation_required", function () {
     var m = document.getElementById("modal-confirm-tool");
     if (m) m.classList.add("open");

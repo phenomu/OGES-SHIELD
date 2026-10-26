@@ -382,6 +382,47 @@
 .module-status.failed  { color: var(--sev-critical); border: 1px solid rgba(244, 63, 94, 0.5); background: rgba(244, 63, 94, 0.10); }
 .module-duration { font-family: var(--font-mono); font-size: 9px; color: var(--text-faint); }
 
+/* ---- Module Pipeline v2 (Phase 4 run page) ---- */
+.module-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: var(--sp-3); }
+.mod-card {
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--r-md);
+  background: linear-gradient(160deg, rgba(15, 23, 42, 0.5), var(--bg-inset));
+  padding: var(--sp-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  min-width: 0;
+  position: relative;
+  overflow: hidden;
+  transition: border-color 0.25s ease, box-shadow 0.25s ease, transform 0.25s ease;
+}
+.mod-card:hover { border-color: rgba(34, 211, 238, 0.35); box-shadow: 0 0 18px rgba(34, 211, 238, 0.08); transform: translateY(-1px); }
+.mod-card.is-running { border-color: rgba(34, 211, 238, 0.5); box-shadow: 0 0 22px rgba(34, 211, 238, 0.12); }
+.mod-card.is-done { border-color: rgba(16, 185, 129, 0.35); }
+.mod-card.is-failed { border-color: rgba(244, 63, 94, 0.45); }
+.mod-head { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); }
+.mod-name {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mod-bar { height: 3px; border-radius: 2px; background: var(--border-subtle); overflow: hidden; }
+.mod-bar .bar { height: 100%; width: 0%; background: var(--accent-cyan); box-shadow: var(--glow-cyan); transition: width 0.6s ease; border-radius: 2px; }
+.mod-card.is-done .mod-bar .bar { background: var(--status-success); box-shadow: none; }
+.mod-card.is-failed .mod-bar .bar { background: var(--sev-critical); box-shadow: none; }
+.mod-card.is-running .mod-bar .bar { animation: mod-sweep 1.4s ease-in-out infinite; }
+@keyframes mod-sweep { 0% { width: 8%; } 50% { width: 55%; } 100% { width: 8%; } }
+.mod-meta { display: flex; align-items: center; justify-content: space-between; font-size: 9px; gap: var(--sp-2); }
+.mod-risk { font-size: 8px; letter-spacing: 0.08em; padding: 1px 6px; border-radius: var(--r-sm); border: 1px solid var(--border-subtle); color: var(--text-faint); }
+.mod-risk.risk-safe { color: var(--status-success); border-color: rgba(16, 185, 129, 0.35); background: rgba(16, 185, 129, 0.07); }
+.mod-risk.risk-intrusive { color: var(--sev-medium); border-color: rgba(245, 158, 11, 0.4); background: rgba(245, 158, 11, 0.07); }
+.mod-risk.risk-destructive { color: var(--sev-critical); border-color: rgba(244, 63, 94, 0.45); background: rgba(244, 63, 94, 0.07); }
+
 /* ---------- Terminal / execution log ---------- */
 .terminal {
   background: var(--bg-inset);
