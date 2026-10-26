@@ -32,6 +32,15 @@ require BASE_PATH . '/src/Core/functions.php';
 Env::load(BASE_PATH . '/.env');
 Session::start();
 
+// --- Security headers (XSS / clickjacking / sniffing) ---
+// CSP dengan nonce per-request: inline <script> di view wajib pakai nonce
+// (View::page injects CSP_NONCE ke semua tag <script>).
+define('CSP_NONCE', bin2hex(random_bytes(16)));
+header('X-Content-Type-Options: nosniff');
+header('X-Frame-Options: DENY');
+header('Referrer-Policy: same-origin');
+header("Content-Security-Policy: default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'nonce-" . CSP_NONCE . "'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'");
+
 $router = new Router();
 
 // --- Route map ---
@@ -57,10 +66,13 @@ $router->add('GET',  '/exploitation',     'exploitation');
 $router->add('GET',  '/persistence',      'persistence');
 $router->add('GET',  '/audit',            'audit');
 $router->add('GET',  '/settings',         'settings');
+$router->add('GET',  '/docs',             'docs');
 $router->add('POST', '/logout',           'ctrl:AuthController@logout');
 $router->add('GET',  '/run',              'ctrl:RunController@show');
 $router->add('POST', '/runs/create',      'ctrl:RunController@create');
 $router->add('POST', '/runs/stop',        'ctrl:RunController@stop');
+$router->add('POST', '/runs/resume',      'ctrl:RunController@resume');
+$router->add('POST', '/runs/delete',      'ctrl:RunController@delete');
 $router->add('POST', '/targets/create',   'ctrl:TargetController@create');
 $router->add('POST', '/targets/scope',    'ctrl:TargetController@toggleScope');
 $router->add('GET',  '/report/download',  'ctrl:ReportController@download');

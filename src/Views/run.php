@@ -42,11 +42,29 @@ $labelFor = fn(string $p) => match ($p) {
   </div>
   <div style="display:flex; gap: var(--sp-2); align-items:center">
     <?= $statusBadge((string) $run['status']) ?>
-    <form method="post" action="/runs/stop" data-confirm="Hentikan run ini? Tool berjalan saat ini akan dibatalkan.">
-      <input type="hidden" name="csrf" value="<?= e(Session::csrf()) ?>">
-      <input type="hidden" name="run_id" value="<?= e($runId) ?>">
-      <button type="submit" class="btn btn-danger">Stop Run</button>
-    </form>
+    <?php if ($run['status'] === 'awaiting_confirmation'): ?>
+      <form method="post" action="/runs/resume">
+        <input type="hidden" name="csrf" value="<?= e(Session::csrf()) ?>">
+        <input type="hidden" name="run_id" value="<?= e($runId) ?>">
+        <button type="submit" class="btn btn-primary">Resume</button>
+      </form>
+    <?php endif; ?>
+    <?php if (in_array($run['status'], ['running', 'awaiting_confirmation'], true)): ?>
+      <form method="post" action="/runs/stop" data-confirm="Hentikan run ini? Tool berjalan saat ini akan dibatalkan.">
+        <input type="hidden" name="csrf" value="<?= e(Session::csrf()) ?>">
+        <input type="hidden" name="run_id" value="<?= e($runId) ?>">
+        <button type="submit" class="btn btn-danger">Stop Run</button>
+      </form>
+    <?php elseif ($run['status'] !== 'pending'): ?>
+      <form method="post" action="/runs/delete" data-confirm="Hapus run ini? Semua event, findings, dan report milik run ikut terhapus. Tidak bisa dibatalkan.">
+        <input type="hidden" name="csrf" value="<?= e(Session::csrf()) ?>">
+        <input type="hidden" name="run_id" value="<?= e($runId) ?>">
+        <button type="submit" class="btn btn-danger">Delete Run</button>
+      </form>
+    <?php endif; ?>
+    <?php if ($run['status'] === 'completed'): ?>
+      <a class="btn" href="/report/download?id=<?= e($runId) ?>" title="Download report.pdf">⬇ Report PDF</a>
+    <?php endif; ?>
   </div>
 </div>
 

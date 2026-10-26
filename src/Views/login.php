@@ -6,7 +6,9 @@ View::$pageTitle = 'Login — OGES-SHIELD';
 
 $loginError = Session::flash('login_error');
 $identifier = Session::flash('login_identifier') ?? '';
-$state      = $_GET['state'] ?? '';
+$stateRaw = $_GET['state'] ?? '';
+$stateRaw = is_string($stateRaw) ? $stateRaw : '';
+$state = in_array($stateRaw, ['pending', 'rejected', 'approved'], true) ? $stateRaw : '';
 ?>
 <div class="auth-card">
   <div class="auth-logo">

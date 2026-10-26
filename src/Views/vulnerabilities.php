@@ -77,8 +77,8 @@ foreach (['critical', 'high', 'medium', 'low', 'info'] as $sev) {
         <div class="fd-field"><span class="fd-label">IMPACT</span><span class="fd-value" id="fd-impact"><?= htmlspecialchars($first['impact']) ?></span></div>
         <div class="fd-field"><span class="fd-label">REMEDIATION</span><span class="fd-value" id="fd-remediation"><?= htmlspecialchars($first['remediation']) ?></span></div>
         <div class="fd-field"><span class="fd-label">REFERENCES</span><span class="fd-value" id="fd-refs">
-          <?php if (!empty($first['refs'])): foreach ($first['refs'] as $ref): ?>
-            <a href="<?= htmlspecialchars($ref) ?>" target="_blank" rel="noopener"><?= htmlspecialchars(parse_url($ref, PHP_URL_HOST) ?: $ref) ?></a><?= !$loop_last ?? '' ? ' · ' : '' ?>
+          <?php if (!empty($first['refs'])): $refTotal = count($first['refs']); foreach (array_values($first['refs']) as $refIdx => $ref): ?>
+            <a href="<?= htmlspecialchars($ref) ?>" target="_blank" rel="noopener"><?= htmlspecialchars(parse_url($ref, PHP_URL_HOST) ?: $ref) ?></a><?= $refIdx < $refTotal - 1 ? ' · ' : '' ?>
           <?php endforeach; else: ?>--<?php endif; ?>
         </span></div>
         <div class="fd-field"><span class="fd-label">VERIFICATION</span><span class="fd-value" id="fd-verification">UNVERIFIED · source <?= htmlspecialchars($first['tool']) ?></span></div>

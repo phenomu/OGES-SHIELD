@@ -9,9 +9,10 @@
 > - Target total: **10–14 hari kerja**. Estimasi hari per phase adalah PANDUAN, boleh geser asal
 >   urutan prioritas (UI/UX dulu, backend belakangan) tetap dipegang.
 
-**Status project saat ini:** 🟡 Phase 5 selesai (findings + AI enrichment + overall summary +
-report.pdf WeasyPrint E2E terverifikasi — run autonomous dari Set Workflow sampai PDF
-download; menunggu approval user untuk Phase 6 — polish, hardening & demo prep).
+**Status project saat ini:** 🟡 Phase 6 berjalan (hardening security + UX polish paruh awal
+selesai: input whitelist, CSP nonce, XSS escape, dashboard/topbar data asli, notifikasi +
+dropdown fungsional, env toggle dihapus, halaman Dokumentasi, resume+delete run; sisa:
+audit log page, demo prep, E2E akun baru — jeda menunggu instruksi user lanjut).
 
 ---
 
@@ -298,12 +299,23 @@ kalau ada).
 ## Phase 6 — Polish, Hardening & Demo Prep (🟣 sebagian, 🔵 sebagian, estimasi 1.5–2 hari)
 
 - [ ] 🟣 Audit Logs page fungsional (baca dari log eksekusi tool + security events Phase 3)
-- [ ] 🟣 Review semua guardrail Bagian 9 `PROMPT.md` — checklist keamanan:
-  - [ ] Semua subprocess call pakai array args, bukan `shell=True` + string concat
-  - [ ] Semua query PHP pakai prepared statement
-  - [ ] Scope check tidak bisa dibypass dari client (test coba kirim target di luar scope)
-  - [ ] `.env` tidak ter-commit, API key tidak muncul di response/log manapun
-  - [ ] CSRF token di semua form POST, cek role di server-side semua halaman admin
+- [x] 🟣 Review semua guardrail Bagian 9 `PROMPT.md` — checklist keamanan:
+  - [x] Semua subprocess call pakai array args, bukan `shell=True` + string concat
+  - [x] Semua query PHP pakai prepared statement
+  - [x] Scope check tidak bisa dibypass dari client (test coba kirim target di luar scope)
+  - [x] `.env` tidak ter-commit, API key tidak muncul di response/log manapun
+  - [x] CSRF token di semua form POST, cek role di server-side semua halaman admin
+      Catatan (review 2026-10-26): subprocess array+shell=False (runner.py, dari Phase 3);
+      prepared statement semua query (Database::run / db.py); scope bypass test ditolak
+      (Phase 3-4: target tak terdaftar + input_file out-of-scope + run completed);
+      .env gitignored, key hanya di orchestrator .env; CSRF di semua POST termasuk
+      resume/delete/confirm-tool baru; guard superadmin front-controller + controller.
+      Tambahan hardening security non-guardrail: CSP nonce per-request
+      (View::injectCspNonce — inline script wajib nonce), X-Frame-Options DENY,
+      nosniff, Referrer-Policy, form-action/base-uri/frame-ancestors 'self';
+      XSS: escape semua output tool di terminal/AI log (app.js esc()); semua input
+      GET di-whitelist is_string (nav[], id[], sev[] dsb — fatal + warning mati);
+      LFI: download PDF realpath + prefix storage/reports/.
 - [ ] 🟣 Error handling: tool gagal/timeout tidak bikin seluruh run macet (tandai failed, lanjut
       atau stop phase dengan jelas di UI)
 - [ ] 🟣 Siapkan 1–2 target demo yang aman & terkontrol (mis. lab/CTF target sendiri, bukan target
@@ -311,7 +323,11 @@ kalau ada).
 - [ ] 🟣 Test ulang alur penuh dari akun baru: register → approval → login → set workflow →
       lihat AI jalan → lihat findings → download report
 - [ ] 🔵 Audit log export (CSV)
-- [ ] 🔵 Notifikasi in-app (bell icon) benar-benar fungsional, bukan statis
+- [x] 🔵 Notifikasi in-app (bell icon) benar-benar fungsional, bukan statis
+      Catatan: dropdown dari run_events (confirmation_required / report_generated /
+      run_failed / run_stopped) + badge count + link ke halaman run. Ditambah user
+      dropdown (Settings/Dokumentasi/Logout) + topbar data asli (engagement run
+      terbaru, workers/queue live).
   - [ ] 🔵 Responsive untuk layar lebih kecil
 - [ ] 🔵 Dekorasi cyberpunk tambahan (city skyline, aksara dekoratif) ala referensi — murni kosmetik,
       kerjakan hanya kalau semua 🟣 di atas sudah beres

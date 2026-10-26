@@ -23,7 +23,9 @@ header('Content-Type: application/json; charset=utf-8');
 header('X-Content-Type-Options: nosniff');
 
 $runId = $_GET['run_id'] ?? '';
-$after = (int) ($_GET['after'] ?? 0);
+$runId = is_string($runId) ? $runId : '';
+$afterRaw = $_GET['after'] ?? 0;
+$after = is_numeric($afterRaw) ? (int) $afterRaw : 0;
 
 if (!preg_match('/^[a-f0-9-]{36}$/', $runId)) {
     http_response_code(422);

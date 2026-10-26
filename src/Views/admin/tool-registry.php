@@ -5,7 +5,10 @@
  */
 
 View::$pageTitle = 'Tool Registry — OGES-SHIELD';
-View::$activeNav = ($_GET['nav'] ?? 'toolregistry');
+$navKey = $_GET['nav'] ?? 'toolregistry';
+$navKey = is_string($navKey) ? $navKey : 'toolregistry';
+if (!in_array($navKey, ['toolregistry', 'modules'], true)) { $navKey = 'toolregistry'; }
+View::$activeNav = $navKey;
 
 $toolsPath = BASE_PATH . '/orchestrator/config/tools.json';
 $toolsJson = file_get_contents($toolsPath);

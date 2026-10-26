@@ -4,15 +4,38 @@
 (function () {
   "use strict";
 
-  /* ---------- Environment pill toggle ---------- */
-  document.querySelectorAll(".env-pill").forEach(function (pill) {
-    pill.addEventListener("click", function () {
-      document.cookie = "oges_env=" + pill.dataset.env + ";path=/;max-age=31536000";
-      document.querySelectorAll(".env-pill").forEach(function (p) {
-        p.classList.toggle("active", p === pill);
+  /* ---------- Dropdown (notif + user menu) — Phase 6 ---------- */
+  function initDropdowns() {
+    var btns = document.querySelectorAll("[data-dropdown]");
+    btns.forEach(function (btn) {
+      var menu = document.getElementById(btn.dataset.dropdown);
+      if (!menu) return;
+      btn.addEventListener("click", function (e) {
+        e.stopPropagation();
+        var open = !menu.hidden;
+        document.querySelectorAll(".dropdown-menu").forEach(function (m) { m.hidden = true; });
+        document.querySelectorAll("[data-dropdown]").forEach(function (b) { b.setAttribute("aria-expanded", "false"); });
+        if (!open) { menu.hidden = false; btn.setAttribute("aria-expanded", "true"); }
       });
     });
-  });
+    document.addEventListener("click", function (e) {
+      if (!e.target.closest("[data-dropdown]") && !e.target.closest(".dropdown-menu")) {
+        document.querySelectorAll(".dropdown-menu").forEach(function (m) { m.hidden = true; });
+        document.querySelectorAll("[data-dropdown]").forEach(function (b) { b.setAttribute("aria-expanded", "false"); });
+      }
+    });
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Escape") {
+        document.querySelectorAll(".dropdown-menu").forEach(function (m) { m.hidden = true; });
+        document.querySelectorAll("[data-dropdown]").forEach(function (b) { b.setAttribute("aria-expanded", "false"); });
+      }
+    });
+  }
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initDropdowns);
+  } else {
+    initDropdowns();
+  }
 
   /* ---------- Tabs ---------- */
   function initTabs(scope) {
@@ -129,13 +152,19 @@
     finding_recorded: "ok", report_generated: "ok",
   };
   var ACTIVE_RUN_ID = ""; // di-set initRunStream utk link download report
+  function esc(s) {
+    return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
   function termLine(time, lv, msg) {
     var line = document.createElement("div");
     line.className = "term-line";
+    // msg dari output tool (bisa berisi HTML dari target) — selalu di-escape
     line.innerHTML =
-      '<span class="term-time">' + time + "</span>" +
-      '<span class="term-lv lv-' + lv + '">' + lv.toUpperCase() + "</span>" +
-      '<span class="term-msg">' + msg + "</span>";
+      '<span class="term-time">' + esc(time) + "</span>" +
+      '<span class="term-lv lv-' + esc(lv) + '">' + esc(lv.toUpperCase()) + "</span>" +
+      '<span class="term-msg">' + esc(msg) + "</span>";
     return line;
   }
   function fmtEvent(e) {
@@ -158,7 +187,7 @@
       case "confirmation_result":   return "KONFIRMASI :: user " + (p.confirmed ? "SETUJU" : "MENOLAK");
       case "security_event":return "SECURITY :: " + JSON.stringify(p).slice(0, 200);
       case "finding_recorded": return "FINDINGS :: " + (p.message || (p.count + " finding dari " + p.tool));
-      case "report_generated": return "REPORT :: " + (p.message || ("PDF dibuat " + (p.file || ""))) + " — <a href='/report/download?id=" + ACTIVE_RUN_ID + "' style='color:var(--accent-cyan)'>download</a>";
+      case "report_generated": return "REPORT :: " + (p.message || ("PDF dibuat " + (p.file || ""))) + " — tombol 'Report PDF' di atas untuk download";
       case "error":         return "ERROR :: " + String(p.error || "").slice(0, 200);
       default:              return e.type + " :: " + JSON.stringify(p).slice(0, 200);
     }
@@ -469,12 +498,13 @@
   function aiLogEntry(time, tag, tool, text) {
     var entry = document.createElement("div");
     entry.className = "ailog-entry";
+    // semua field dari event payload (bisa berisi HTML dari target) — escape
     entry.innerHTML =
-      '<span class="ailog-time">' + time + "</span>" +
+      '<span class="ailog-time">' + esc(time) + "</span>" +
       '<div class="ailog-body">' +
-      '<span class="ailog-tag ' + tag + '">' + (tag === "ai_decision" ? "AI DECISION" : "TOOL DONE") + "</span>" +
-      '<span class="ailog-tool">' + tool + "</span>" +
-      '<p class="ailog-text">' + text + "</p>" +
+      '<span class="ailog-tag ' + esc(tag) + '">' + (tag === "ai_decision" ? "AI DECISION" : "TOOL DONE") + "</span>" +
+      '<span class="ailog-tool">' + esc(tool) + "</span>" +
+      '<p class="ailog-text">' + esc(text) + "</p>" +
       "</div>";
     return entry;
   }

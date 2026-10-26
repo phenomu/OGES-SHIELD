@@ -38,7 +38,8 @@ final class ReportController
     /** GET /report/download?id=<run_id> — stream PDF ke browser. */
     public static function download(): void
     {
-        $runId = (string) ($_GET['id'] ?? '');
+        $runIdGet = $_GET['id'] ?? '';
+        $runId = is_string($runIdGet) ? $runIdGet : '';
         if (!preg_match('/^[a-f0-9-]{36}$/', $runId)) {
             http_response_code(400);
             exit('run id tidak valid');

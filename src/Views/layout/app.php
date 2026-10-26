@@ -1,10 +1,9 @@
 <?php
 /**
  * Layout app shell: topbar fixed + sidebar fixed + area konten scroll.
- * Dipakai via View::page() — $content sudah ter-capture.
+ * Dipakai via View::page() — $content sudah ter-captured.
+ * Topbar & sidebar ambil data asli sendiri (Phase 6 — MockData tak dipakai lagi di shell).
  */
-if (!isset($engine))       $engine = MockData::engineStatus();
-if (!isset($engagement))   $engagement = MockData::engagement();
 ?>
 <!DOCTYPE html>
 <html lang="id">

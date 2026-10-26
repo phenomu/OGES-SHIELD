@@ -63,7 +63,8 @@ final class RunController
     /** GET /run?id=... — halaman live run. */
     public static function show(): void
     {
-        $runId = trim((string) ($_GET['id'] ?? ''));
+        $runIdGet = $_GET['id'] ?? '';
+        $runId = trim(is_string($runIdGet) ? $runIdGet : '');
         if (!preg_match('/^[a-f0-9-]{36}$/', $runId)) {
             http_response_code(404);
             View::render('404');
@@ -133,6 +134,61 @@ final class RunController
         $resp = self::orchestratorPost('/runs/' . urlencode($runId) . '/stop', '{}');
         Audit::log((int) Auth::user()['id'], 'run_stop_requested', ['run_id' => $runId]);
         redirect('/run?id=' . urlencode($runId));
+    }
+
+    /** POST /runs/resume — run awaiting_confirmation: kembali ke modal keputusan. */
+    public static function resume(): void
+    {
+        Auth::requireLogin();
+        $user = Auth::user();
+        $runId = (string) ($_POST['run_id'] ?? '');
+        if (!Session::checkCsrf((string) ($_POST['csrf'] ?? ''))) {
+            Session::flash('run_error', 'Sesi kedaluwarsa — coba lagi.');
+            redirect('/run?id=' . urlencode($runId));
+        }
+        $db = Database::pdo();
+        $st = $db->prepare('SELECT status, created_by FROM workflow_runs WHERE id = ?');
+        $st->execute([$runId]);
+        $run = $st->fetch(PDO::FETCH_ASSOC);
+        if (!$run || ((int) $run['created_by'] !== (int) $user['id'] && $user['role'] !== 'superadmin')) {
+            Session::flash('run_error', 'Run tidak ditemukan / bukan milik kamu.');
+            redirect('/workflows');
+        }
+        // resume = tampilkan kembali halaman run; modal konfirmasi auto-open
+        // selama status masih awaiting_confirmation (event confirmation_required ada).
+        Audit::log((int) $user['id'], 'run_resume_viewed', ['run_id' => $runId]);
+        redirect('/run?id=' . urlencode($runId));
+    }
+
+    /** POST /runs/delete — hapus run + event + findings + report (konfirmasi modal). */
+    public static function delete(): void
+    {
+        Auth::requireLogin();
+        $user = Auth::user();
+        $runId = (string) ($_POST['run_id'] ?? '');
+        if (!Session::checkCsrf((string) ($_POST['csrf'] ?? ''))) {
+            Session::flash('run_error', 'Sesi kedaluwarsa — coba lagi.');
+            redirect('/run?id=' . urlencode($runId));
+        }
+        $db = Database::pdo();
+        $st = $db->prepare('SELECT status, created_by FROM workflow_runs WHERE id = ?');
+        $st->execute([$runId]);
+        $run = $st->fetch(PDO::FETCH_ASSOC);
+        if (!$run || ((int) $run['created_by'] !== (int) $user['id'] && $user['role'] !== 'superadmin')) {
+            Session::flash('run_error', 'Run tidak ditemukan / bukan milik kamu.');
+            redirect('/workflows');
+        }
+        if ($run['status'] === 'running' || $run['status'] === 'awaiting_confirmation') {
+            // run aktif harus di-stop dulu — jangan hapus saat loop masih hidup
+            Session::flash('run_error', 'Run masih berjalan — stop dulu sebelum delete.');
+            redirect('/run?id=' . urlencode($runId));
+        }
+        Audit::log((int) $user['id'], 'run_deleted', ['run_id' => $runId]);
+        // FK ON DELETE CASCADE: run_events + findings + reports ikut terhapus
+        $st = $db->prepare('DELETE FROM workflow_runs WHERE id = ?');
+        $st->execute([$runId]);
+        Session::flash('wf_success', 'Run ' . substr($runId, 0, 8) . '… dihapus.');
+        redirect('/workflows');
     }
 
     /** HTTP POST ke orchestrator (internal). @return array|null decoded JSON. */

@@ -23,13 +23,29 @@ final class View
     public static function page(string $template, array $data = []): void
     {
         $content = self::capture($template, $data);
+        $content = self::injectCspNonce($content);
         require BASE_PATH . '/src/Views/layout/app.php';
     }
 
     public static function auth(string $template, array $data = []): void
     {
         $content = self::capture($template, $data);
+        $content = self::injectCspNonce($content);
         require BASE_PATH . '/src/Views/layout/auth.php';
+    }
+
+    /** Tambah nonce CSP ke semua <script> inline (CSP script-src 'nonce-…'). */
+    private static function injectCspNonce(string $html): string
+    {
+        $nonce = defined('CSP_NONCE') ? CSP_NONCE : '';
+        if ($nonce === '') {
+            return $html;
+        }
+        return (string) preg_replace(
+            '/<script(?![^>]*(?:nonce=|src=))/i',
+            '<script nonce="' . $nonce . '"',
+            $html
+        );
     }
 
     private static function capture(string $template, array $data = []): string

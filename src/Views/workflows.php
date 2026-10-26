@@ -95,7 +95,7 @@ $wfError = Session::flash('wf_error');
     </div>
     <div class="table-wrap">
       <table class="tbl">
-        <thead><tr><th>Run ID</th><th>Target</th><th>Template</th><th>Status</th><th>Created</th></tr></thead>
+        <thead><tr><th>Run ID</th><th>Target</th><th>Template</th><th>Status</th><th>Created</th><th></th></tr></thead>
         <tbody>
           <?php foreach ($runs as $r): ?>
             <tr>
@@ -104,10 +104,19 @@ $wfError = Session::flash('wf_error');
               <td><?= e((string) $r['template_name']) ?></td>
               <td><?= $runStatusBadge((string) $r['status']) ?></td>
               <td class="mono"><?= e(substr((string) $r['created_at'], 0, 16)) ?></td>
+              <td>
+                <?php if (!in_array($r['status'], ['running', 'awaiting_confirmation', 'pending'], true)): ?>
+                  <form method="post" action="/runs/delete" style="display:inline" data-confirm="Hapus run <?= e(substr((string) $r['id'], 0, 8)) ?>…? Event, findings, dan report ikut terhapus.">
+                    <input type="hidden" name="csrf" value="<?= e(Session::csrf()) ?>">
+                    <input type="hidden" name="run_id" value="<?= e($r['id']) ?>">
+                    <button type="submit" class="btn btn-sm btn-danger">Hapus</button>
+                  </form>
+                <?php endif; ?>
+              </td>
             </tr>
           <?php endforeach; ?>
           <?php if (!$runs): ?>
-            <tr><td colspan="5" class="text-muted">Belum ada run — mulai dengan Set Workflow.</td></tr>
+            <tr><td colspan="6" class="text-muted">Belum ada run — mulai dengan Set Workflow.</td></tr>
           <?php endif; ?>
         </tbody>
       </table>
@@ -166,6 +175,12 @@ $wfError = Session::flash('wf_error');
     btn.addEventListener("click", function () {
       var sel = document.getElementById("sw-template");
       if (sel) sel.value = btn.dataset.pickTemplate;
+    });
+  });
+  // konfirmasi aksi destruktif (hapus run)
+  document.querySelectorAll("form[data-confirm]").forEach(function (f) {
+    f.addEventListener("submit", function (e) {
+      if (!window.confirm(f.dataset.confirm)) e.preventDefault();
     });
   });
 })();

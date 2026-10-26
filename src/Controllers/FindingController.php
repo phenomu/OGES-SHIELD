@@ -14,7 +14,8 @@ final class FindingController
         $isSuper = ($user['role'] ?? '') === 'superadmin';
 
         $db = Database::pdo();
-        $sev = (string) ($_GET['sev'] ?? 'all');
+        $sevGet = $_GET['sev'] ?? 'all';
+        $sev = is_string($sevGet) ? $sevGet : 'all';
         if (!in_array($sev, ['all', 'critical', 'high', 'medium', 'low', 'info'], true)) {
             $sev = 'all';
         }
