@@ -6,12 +6,12 @@ set -euo pipefail
 BIN_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/bin"
 mkdir -p "$BIN_DIR"
 
-# Tool list: id:repo — cukup tambah baris kalau perlu tool baru
+# Tool list: name:repo@version — pin versi supaya build reproducible.
+# Catatan: paket CLI ProjectDiscovery ada di bawah /cmd/<name> di dalam module.
 TOOLS=(
-  "subfinder:projectdiscovery/subfinder/v2"
-  "httpx:projectdiscovery/httpx/cmd/httpx"
-  "nuclei:projectdiscovery/nuclei/v3/cmd/nuclei"
-  "naabu:projectdiscovery/naabu/v2/cmd/naabu"
+  "subfinder:projectdiscovery/subfinder/v2/cmd/subfinder@v2.6.7"
+  "httpx:projectdiscovery/httpx/cmd/httpx@v1.7.0"
+  "nuclei:projectdiscovery/nuclei/v3/cmd/nuclei@v3.8.0"
 )
 
 echo "== OGES-SHIELD tools setup =="
@@ -25,7 +25,7 @@ for pair in "${TOOLS[@]}"; do
     continue
   fi
   echo "[install] $name ($repo)"
-  GOBIN="$BIN_DIR" go install -v "github.com/$repo@latest"
+  GOBIN="$BIN_DIR" go install -v "github.com/$repo"
 done
 
 # Nuclei butuh templates — download ke path user default (~/.config/nuclei/templates)

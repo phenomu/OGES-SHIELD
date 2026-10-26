@@ -9,8 +9,8 @@
 > - Target total: **10–14 hari kerja**. Estimasi hari per phase adalah PANDUAN, boleh geser asal
 >   urutan prioritas (UI/UX dulu, backend belakangan) tetap dipegang.
 
-**Status project saat ini:** 🟡 Phase 2 selesai (auth & RBAC nyata, E2E terverifikasi;
-menunggu approval user untuk Phase 3 — orchestrator & eksekusi tools nyata).
+**Status project saat ini:** 🟡 Phase 3 selesai (orchestrator + eksekusi tool nyata + live
+streaming E2E terverifikasi; menunggu approval user untuk Phase 4 — AI orchestration loop).
 
 ---
 
@@ -153,27 +153,52 @@ menunggu approval user untuk Phase 3 — orchestrator & eksekusi tools nyata).
 **Definition of Done Phase 2:** alur register → pending → approve → login benar-benar jalan end to
 end, tanpa data dummy.
 
+> `APPROVED by user: 2026-10-26`
+
 ---
 
 ## Phase 3 — Orchestrator & Eksekusi Tools Nyata (🟣, estimasi 2–3 hari)
 
-- [ ] Orchestrator FastAPI skeleton: endpoint internal `POST /runs`, `GET /runs/{id}/events`,
+- [x] Orchestrator FastAPI skeleton: endpoint internal `POST /runs`, `GET /runs/{id}/events`,
       `POST /internal/reload-tools`
-- [ ] Install & test manual tiap binary Go yang dipakai (`subfinder`, `httpx`, `nuclei`, dst) via
+      Catatan: tambahan `POST /internal/execute-tool` (eksekusi manual per tool), `GET
+      /internal/tools`, `POST /runs/{id}/stop`. DB layer `db.py` (PyMySQL, param binding).
+- [x] Install & test manual tiap binary Go yang dipakai (`subfinder`, `httpx`, `nuclei`, dst) via
       `scripts/setup.sh`, pastikan path binary terdeteksi orchestrator
-- [ ] `tools/registry.py` — loader + validator `tools.json` (schema check, reject kalau format salah)
-- [ ] 1 tool runner dulu sebagai pola (mis. `httpx`): subprocess call dengan array argumen
+      Catatan: setup.sh dipin versi + path paket benar (`/cmd/<name>`); naabu dihapus dari
+      list (butuh libpcap-dev + raw socket — tidak praktis di WSL demo). Runner resolve
+      binary dari `bin/` lalu PATH.
+- [x] `tools/registry.py` — loader + validator `tools.json` (schema check, reject kalau format salah)
+      Catatan: validasi ketat (field wajib, enum category/risk/parser, schema param, placeholder
+      template vs schema, destructive wajib requires_confirmation, id duplikat). tools.json
+      httpx ditambah input_schema saat validasi pertama menolaknya.
+- [x] 1 tool runner dulu sebagai pola (mis. `httpx`): subprocess call dengan array argumen
       (`shell=False`), parse output JSON lines, tulis `run_events`
-- [ ] Ulangi pola untuk tool lain yang dipakai di workflow template awal (minimal: subfinder, httpx,
+      Catatan: pola runner generik (`tools/runner.py`) untuk semua tool: validasi param
+      (typed + enum + reject shell-metachar), rakit args dari template placeholder, parse
+      output (jsonlines/json/text), event tool_started/completed/failed + audit_logs.
+- [x] Ulangi pola untuk tool lain yang dipakai di workflow template awal (minimal: subfinder, httpx,
       nuclei, 1 tool custom Python)
-- [ ] Scope enforcement: sebelum eksekusi, cek target ada di `targets` dengan `in_scope=true` milik
+      Catatan: custom `tools/sqli_probe.py` (benign boolean-based probe). nuclei template
+      flag `-json` → `-j` (v3.8 deprecated). Semua 4 tool teruji live via API + browser.
+- [x] Scope enforcement: sebelum eksekusi, cek target ada di `targets` dengan `in_scope=true` milik
       run tsb — kalau tidak, tolak + log security event
-- [ ] Endpoint PHP `api/stream.php` (polling, ambil event setelah `last_event_id`) → sambungkan ke
+      Catatan: guardrail 9.1 teruji: target tak terdaftar ditolak, param di luar scope ditolak,
+      isi `input_file` di-scope-check per baris, run stopped/completed menolak eksekusi baru,
+      semua violation tercatat `audit_logs` action=scope_violation.
+- [x] Endpoint PHP `api/stream.php` (polling, ambil event setelah `last_event_id`) → sambungkan ke
       panel Execution Logs & Module Pipeline yang di Phase 1 masih dummy → ganti jadi data asli
-- [ ] Test manual: jalankan 1 tool end-to-end dari UI → lihat log real-time muncul di panel
+      Catatan: proxy PHP (auth session + ownership check run) → orchestrator. JS `initRunStream`
+      polling 2s; terminal + module card + page live `/run?id=...` data asli. workflows.php
+      sekarang DB asli + Set Workflow POST nyata → halaman run.
+- [x] Test manual: jalankan 1 tool end-to-end dari UI → lihat log real-time muncul di panel
+      Catatan: E2E browser: 2 run nyata (subfinder 507 records live streaming, httpx waf-detect,
+      nuclei 100s, sqli_probe 1.3s) — semua muncul real-time tanpa reload.
 
 **Definition of Done Phase 3:** klik "Run" 1 tool dari UI benar-benar mengeksekusi binary asli di
 server, hasilnya masuk DB, dan progress-nya kelihatan live di dashboard (bukan dummy lagi).
+
+> `APPROVED by user: 2026-10-26`
 
 ---
 

@@ -400,6 +400,7 @@
 .lv-info  { color: var(--accent-cyan); }
 .lv-warn  { color: var(--sev-medium); }
 .lv-error { color: var(--sev-critical); }
+.lv-ok    { color: var(--status-success); }
 .term-msg { color: var(--text-secondary); }
 .term-actions { display: flex; gap: var(--sp-2); margin-top: var(--sp-2); }
 

@@ -58,6 +58,9 @@ $router->add('GET',  '/persistence',      'persistence');
 $router->add('GET',  '/audit',            'audit');
 $router->add('GET',  '/settings',         'settings');
 $router->add('POST', '/logout',           'ctrl:AuthController@logout');
+$router->add('GET',  '/run',              'ctrl:RunController@show');
+$router->add('POST', '/runs/create',      'ctrl:RunController@create');
+$router->add('POST', '/runs/stop',        'ctrl:RunController@stop');
 
 // Admin (wajib superadmin — guard di bawah + di controller)
 $router->add('GET',  '/admin/approvals',    'ctrl:AdminController@approvals');

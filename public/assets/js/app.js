@@ -75,7 +75,9 @@
     });
   }
 
-  /* ---------- Dummy live log generator (Phase 1; diganti polling /api/stream.php Phase 3) ---------- */
+  /* ---------- Live log feeds ----------
+     Phase 3: kalau ada terminal dengan data-run-id → polling /api/stream.php
+     (event asli dari orchestrator). Terminal tanpa data-run-id tetap dummy. */
   var LOG_SOURCES = [
     ["INFO",  "orchestrator.loop",    "phase=vulnerability_assessment iter=6 tool_pool=3"],
     ["INFO",  "nuclei_runner",        "template=default/cves/2021/CVE-2021-23017.yaml status=matched host=www.acme-corp.com"],
@@ -104,6 +106,7 @@
   }
   function initLogFeeds() {
     document.querySelectorAll(".terminal[data-terminal]").forEach(function (term) {
+      if (term.dataset.runId) return; // terminal live — ditangani initRunStream
       var key = term.dataset.terminal;
       setInterval(function () {
         if (!liveLogsOn[key]) return;
@@ -111,6 +114,91 @@
         if (term.childElementCount > 200) term.removeChild(term.firstChild);
         term.scrollTop = term.scrollHeight;
       }, 1800 + Math.random() * 900);
+    });
+  }
+
+  /* ---------- Run stream (Phase 3: event asli via /api/stream.php) ---------- */
+  var LV_FOR = {
+    tool_started: "info", tool_completed: "ok", tool_failed: "error",
+    tool_output: "info", ai_summary: "info", ai_decision: "info",
+    phase_complete: "ok", run_started: "ok", run_completed: "ok",
+    run_stopped: "warn", security_event: "warn", error: "error",
+  };
+  function termLine(time, lv, msg) {
+    var line = document.createElement("div");
+    line.className = "term-line";
+    line.innerHTML =
+      '<span class="term-time">' + time + "</span>" +
+      '<span class="term-lv lv-' + lv + '">' + lv.toUpperCase() + "</span>" +
+      '<span class="term-msg">' + msg + "</span>";
+    return line;
+  }
+  function fmtEvent(e) {
+    var p = e.payload || {};
+    var tool = p.tool || "";
+    switch (e.type) {
+      case "run_started":   return "run dimulai · template=" + (p.template || "?") + " target=" + (p.target || "?");
+      case "tool_started":  return tool + " :: start " + (p.binary || "") + " " + ((p.args || []).join(" ")) + " target=" + (p.target || "?");
+      case "tool_completed":return tool + " :: selesai rc=" + p.returncode + " records=" + (p.record_count != null ? p.record_count : "?");
+      case "tool_failed":   return tool + " :: GAGAL " + (p.error || ("rc=" + p.returncode)) + (p.stderr_tail ? " — " + String(p.stderr_tail).slice(0, 120) : "");
+      case "tool_output":   return tool + " :: " + (typeof p.line === "string" ? p.line.slice(0, 160) : JSON.stringify(p).slice(0, 160));
+      case "phase_complete":return "phase '" + e.phase + "' selesai";
+      case "run_completed": return "run selesai";
+      case "run_stopped":   return "run dihentikan";
+      case "ai_summary":    return "AI :: " + String(p.summary || JSON.stringify(p)).slice(0, 200);
+      case "ai_decision":   return "AI :: pilih " + (p.tool || "?") + " — " + String(p.reason || "").slice(0, 160);
+      case "security_event":return "SECURITY :: " + JSON.stringify(p).slice(0, 200);
+      default:              return e.type + " :: " + JSON.stringify(p).slice(0, 200);
+    }
+  }
+  function moduleCardUpdate(e) {
+    var p = e.payload || {};
+    var card = document.querySelector('[data-module="' + (p.tool || "") + '"]');
+    if (!card) return;
+    var statusEl = card.querySelector(".module-status");
+    var durEl = card.querySelector(".module-duration");
+    if (!statusEl) return;
+    if (e.type === "tool_started") {
+      statusEl.className = "module-status running";
+      statusEl.textContent = "RUNNING";
+      if (durEl) durEl.textContent = "--";
+    } else if (e.type === "tool_completed") {
+      statusEl.className = "module-status done";
+      statusEl.textContent = "DONE";
+      if (durEl && p.elapsed_ms != null) durEl.textContent = (p.elapsed_ms / 1000).toFixed(1) + "s";
+    } else if (e.type === "tool_failed") {
+      statusEl.className = "module-status failed";
+      statusEl.textContent = "FAILED";
+    }
+  }
+  function initRunStream() {
+    document.querySelectorAll(".terminal[data-run-id]").forEach(function (term) {
+      var runId = term.dataset.runId;
+      var lastEventId = 0;
+      var pollMs = 2000; // polling 2s (PROMPT.md: 1-2s cukup utk demo)
+
+      function tick() {
+        fetch("/api/stream.php?run_id=" + encodeURIComponent(runId) + "&after=" + lastEventId)
+          .then(function (r) { return r.ok ? r.json() : null; })
+          .then(function (data) {
+            if (!data || !data.events) return;
+            data.events.forEach(function (e) {
+              if (e.id <= lastEventId) return;
+              lastEventId = e.id;
+              var time = (e.created_at || "").slice(11, 19);
+              var lv = LV_FOR[e.type] || "info";
+              term.appendChild(termLine(time, lv, fmtEvent(e)));
+              moduleCardUpdate(e);
+            });
+            if (term.childElementCount > 300) {
+              while (term.childElementCount > 200) term.removeChild(term.firstChild);
+            }
+            if (liveLogsOn[term.dataset.terminal] !== false) term.scrollTop = term.scrollHeight;
+          })
+          .catch(function () { /* orchestrator down — coba lagi tick berikutnya */ });
+      }
+      tick();
+      setInterval(tick, pollMs);
     });
   }
 
@@ -230,6 +318,7 @@
     initModals();
     initTerminals();
     initLogFeeds();
+    initRunStream();
     if (window.Chart) { initSparklines(); initDonut(); initTimeline(); }
     initElapsedTimers();
   }
