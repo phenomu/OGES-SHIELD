@@ -103,6 +103,26 @@ $statusBadge = fn(string $s) => match ($s) {
   </div>
 </section>
 
+<!-- Modal konfirmasi tool destructive (guardrail 9.4 — Phase 4) -->
+<div class="modal-backdrop" id="modal-confirm-tool">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-head">
+      <span class="modal-title">Konfirmasi Tool Destructive</span>
+      <button type="button" class="modal-close" data-modal-close>&times;</button>
+    </div>
+    <div class="modal-body">
+      <p class="fd-value" id="confirm-tool-text">
+        AI memilih tool berisiko <span class="sev sev-critical">DESTRUCTIVE</span>.
+        Run di-pause sampai kamu memutuskan. Tool tidak dieksekusi tanpa persetujuan eksplisit.
+      </p>
+    </div>
+    <div class="modal-foot">
+      <button type="button" class="btn" data-modal-close id="btn-tool-reject">Tolak</button>
+      <button type="button" class="btn btn-primary" data-modal-close id="btn-tool-confirm">Izinkan Eksekusi</button>
+    </div>
+  </div>
+</div>
+
 <script>
 (function () {
   // konfirmasi stop (aksi destruktif — Bagian 4.11)
@@ -111,7 +131,32 @@ $statusBadge = fn(string $s) => match ($s) {
       if (!window.confirm(f.dataset.confirm)) e.preventDefault();
     });
   });
-  // phase stepper: tandai active sesuai event phase_complete/run phase
-  document.addEventListener("DOMContentLoaded", function () { /* app.js initRunStream jalan */ });
+
+  // Konfirmasi tool destructive (guardrail 9.4): modal auto-open + kirim ke PHP proxy
+  var RUN_ID = "<?= e($runId) ?>";
+  function sendConfirm(ok) {
+    var fd = new FormData();
+    fd.append("run_id", RUN_ID);
+    fd.append("confirmed", ok ? "1" : "0");
+    fd.append("csrf", "<?= e(Session::csrf()) ?>");
+    fetch("/api/confirm-tool.php", { method: "POST", body: fd })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (d) { if (!d || !d.ok) console.warn("confirm gagal", d); });
+  }
+  document.addEventListener("DOMContentLoaded", function () {
+    var btnC = document.getElementById("btn-tool-confirm");
+    var btnR = document.getElementById("btn-tool-reject");
+    if (btnC) btnC.addEventListener("click", function () { sendConfirm(true); });
+    if (btnR) btnR.addEventListener("click", function () { sendConfirm(false); });
+  });
+  // modal auto-open saat event confirmation_required masuk (hook dari app.js)
+  window.addEventListener("oges:confirmation_required", function () {
+    var m = document.getElementById("modal-confirm-tool");
+    if (m) m.classList.add("open");
+  });
+  window.addEventListener("oges:run_completed", function () {
+    var m = document.getElementById("modal-confirm-tool");
+    if (m) m.classList.remove("open");
+  });
 })();
 </script>

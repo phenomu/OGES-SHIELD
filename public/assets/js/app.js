@@ -120,9 +120,12 @@
   /* ---------- Run stream (Phase 3: event asli via /api/stream.php) ---------- */
   var LV_FOR = {
     tool_started: "info", tool_completed: "ok", tool_failed: "error",
-    tool_output: "info", ai_summary: "info", ai_decision: "info",
-    phase_complete: "ok", run_started: "ok", run_completed: "ok",
-    run_stopped: "warn", security_event: "warn", error: "error",
+    tool_output: "info", tool_skipped: "warn",
+    ai_summary: "info", ai_decision: "info",
+    phase_started: "info", phase_complete: "ok", run_started: "ok", run_completed: "ok",
+    run_stopped: "warn", run_failed: "error",
+    confirmation_required: "warn", confirmation_result: "info",
+    security_event: "warn", error: "error",
   };
   function termLine(time, lv, msg) {
     var line = document.createElement("div");
@@ -138,16 +141,21 @@
     var tool = p.tool || "";
     switch (e.type) {
       case "run_started":   return "run dimulai · template=" + (p.template || "?") + " target=" + (p.target || "?");
+      case "phase_started": return "── phase '" + e.phase + "' dimulai ──";
       case "tool_started":  return tool + " :: start " + (p.binary || "") + " " + ((p.args || []).join(" ")) + " target=" + (p.target || "?");
       case "tool_completed":return tool + " :: selesai rc=" + p.returncode + " records=" + (p.record_count != null ? p.record_count : "?");
       case "tool_failed":   return tool + " :: GAGAL " + (p.error || ("rc=" + p.returncode)) + (p.stderr_tail ? " — " + String(p.stderr_tail).slice(0, 120) : "");
       case "tool_output":   return tool + " :: " + (typeof p.line === "string" ? p.line.slice(0, 160) : JSON.stringify(p).slice(0, 160));
-      case "phase_complete":return "phase '" + e.phase + "' selesai";
-      case "run_completed": return "run selesai";
+      case "tool_skipped":  return tool + " :: DILEWATI — " + (p.reason || "user menolak");
+      case "phase_complete":return "── phase '" + e.phase + "' selesai — " + (p.reason || "ok") + " ──";
+      case "run_completed": return "run SELESAI";
       case "run_stopped":   return "run dihentikan";
-      case "ai_summary":    return "AI :: " + String(p.summary || JSON.stringify(p)).slice(0, 200);
+      case "ai_summary":    return "AI :: " + String(p.summary || JSON.stringify(p)).slice(0, 240);
       case "ai_decision":   return "AI :: pilih " + (p.tool || "?") + " — " + String(p.reason || "").slice(0, 160);
+      case "confirmation_required": return "⚠ KONFIRMASI DIBUTUHKAN :: tool '" + (p.tool || "?") + "' destructive — " + (p.message || "tunggu konfirmasi user");
+      case "confirmation_result":   return "KONFIRMASI :: user " + (p.confirmed ? "SETUJU" : "MENOLAK");
       case "security_event":return "SECURITY :: " + JSON.stringify(p).slice(0, 200);
+      case "error":         return "ERROR :: " + String(p.error || "").slice(0, 200);
       default:              return e.type + " :: " + JSON.stringify(p).slice(0, 200);
     }
   }
@@ -171,6 +179,36 @@
       statusEl.textContent = "FAILED";
     }
   }
+  /* stepper halaman run: fase aktif highlight sesuai event */
+  function stepperUpdate(e) {
+    var steps = document.querySelectorAll(".stepper .step[data-phase]");
+    if (!steps.length) return;
+    var idx = -1;
+    if (e.type === "phase_started") {
+      steps.forEach(function (s, i) {
+        s.classList.toggle("active", s.dataset.phase === e.phase);
+        if (s.dataset.phase === e.phase) idx = i;
+      });
+      steps.forEach(function (s, i) { if (i < idx) s.classList.add("done"); });
+    } else if (e.type === "phase_complete") {
+      steps.forEach(function (s) {
+        if (s.dataset.phase === e.phase) { s.classList.remove("active"); s.classList.add("done"); }
+      });
+    } else if (e.type === "run_completed" || e.type === "run_stopped") {
+      steps.forEach(function (s) { s.classList.remove("active"); });
+    }
+  }
+  /* badge status di halaman run */
+  function statusBadgeUpdate(e) {
+    var badge = document.querySelector(".page-head .sev");
+    if (!badge) return;
+    var map = { run_started: ["RUNNING", "sev-info"], phase_started: ["RUNNING", "sev-info"],
+                confirmation_required: ["AWAITING CONFIRMATION", "sev-medium"],
+                run_completed: ["COMPLETED", "sev-info"], run_stopped: ["STOPPED", "sev-medium"],
+                run_failed: ["FAILED", "sev-critical"] };
+    var m = map[e.type];
+    if (m) { badge.textContent = m[0]; badge.className = "sev " + m[1]; }
+  }
   function initRunStream() {
     document.querySelectorAll(".terminal[data-run-id]").forEach(function (term) {
       var runId = term.dataset.runId;
@@ -189,6 +227,14 @@
               var lv = LV_FOR[e.type] || "info";
               term.appendChild(termLine(time, lv, fmtEvent(e)));
               moduleCardUpdate(e);
+              stepperUpdate(e);
+              statusBadgeUpdate(e);
+              if (e.type === "confirmation_required") {
+                window.dispatchEvent(new CustomEvent("oges:confirmation_required", { detail: e }));
+              }
+              if (e.type === "run_completed" || e.type === "run_stopped") {
+                window.dispatchEvent(new CustomEvent("oges:" + e.type, { detail: e }));
+              }
             });
             if (term.childElementCount > 300) {
               while (term.childElementCount > 200) term.removeChild(term.firstChild);
@@ -312,6 +358,51 @@
     });
   }
 
+  /* ---------- AI Orchestration Log live (Phase 4: data run_events asli) ---------- */
+  function aiLogEntry(time, tag, tool, text) {
+    var entry = document.createElement("div");
+    entry.className = "ailog-entry";
+    entry.innerHTML =
+      '<span class="ailog-time">' + time + "</span>" +
+      '<div class="ailog-body">' +
+      '<span class="ailog-tag ' + tag + '">' + (tag === "ai_decision" ? "AI DECISION" : "TOOL DONE") + "</span>" +
+      '<span class="ailog-tool">' + tool + "</span>" +
+      '<p class="ailog-text">' + text + "</p>" +
+      "</div>";
+    return entry;
+  }
+  function initAiLogStream() {
+    var box = document.querySelector("[data-ai-log-run]");
+    if (!box) return; // dashboard lama tanpa atribut → dummy tetap
+    var runId = box.dataset.aiLogRun;
+    var lastEventId = 0;
+    function tick() {
+      fetch("/api/stream.php?run_id=" + encodeURIComponent(runId) + "&after=" + lastEventId)
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (data) {
+          if (!data || !data.events) return;
+          data.events.forEach(function (e) {
+            if (e.id <= lastEventId) return;
+            if (e.type === "ai_decision") {
+              var p = e.payload || {};
+              box.appendChild(aiLogEntry((e.created_at || "").slice(11, 19), "ai_decision",
+                p.tool || "?", String(p.reason || "").slice(0, 300)));
+            } else if (e.type === "ai_summary") {
+              var p2 = e.payload || {};
+              box.appendChild(aiLogEntry((e.created_at || "").slice(11, 19), "tool_completed",
+                p2.tool || "?", String(p2.summary || "").slice(0, 400)));
+            }
+            lastEventId = e.id;
+          });
+          while (box.childElementCount > 30) box.removeChild(box.firstChild);
+          box.scrollTop = box.scrollHeight;
+        })
+        .catch(function () {});
+    }
+    tick();
+    setInterval(tick, 3000);
+  }
+
   /* ---------- Boot ---------- */
   function boot() {
     initTabs(document);
@@ -319,6 +410,7 @@
     initTerminals();
     initLogFeeds();
     initRunStream();
+    initAiLogStream();
     if (window.Chart) { initSparklines(); initDonut(); initTimeline(); }
     initElapsedTimers();
   }

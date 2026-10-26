@@ -13,12 +13,29 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
 import db
+import threading
 from config import settings
+from ai.loop import run_workflow_loop
 from tools.registry import ToolRegistryError, registry
 from tools.runner import (ScopeViolation, ToolValidationError, audit,
                            run_tool, write_event)
 
-app = FastAPI(title="OGES-SHIELD Orchestrator", version="0.2.0")
+app = FastAPI(title="OGES-SHIELD Orchestrator", version="0.3.0")
+
+# worker pool sederhana: thread per run (cukup utk demo; lihat tracker)
+_workers: dict[str, threading.Thread] = {}
+_workers_lock = threading.Lock()
+
+
+def _spawn_loop(run_id: str) -> None:
+    with _workers_lock:
+        t = _workers.get(run_id)
+        if t is not None and t.is_alive():
+            return
+        th = threading.Thread(target=run_workflow_loop, args=(run_id,),
+                              name=f"oges-loop-{run_id[:8]}", daemon=True)
+        _workers[run_id] = th
+    th.start()
 
 
 @app.on_event("startup")
@@ -95,7 +112,9 @@ def create_run(body: RunCreate) -> dict:
     write_event(run_id, "scope_validation", "run_started", {
         "template": template["slug"], "target": target["value"],
     })
-    return {"run_id": run_id, "status": "pending"}
+    # Phase 4: AI loop jalan otomatis (thread) — run tidak lagi pending diam.
+    _spawn_loop(run_id)
+    return {"run_id": run_id, "status": "running"}
 
 
 @app.get("/runs/{run_id}/events")
@@ -171,3 +190,44 @@ def stop_run(run_id: str) -> dict:
     write_event(run_id, "cleanup_verification", "run_stopped", {"by": "api"})
     audit(None, "run_stopped", {"run_id": run_id}, run_id=run_id)
     return {"ok": True, "run_id": run_id, "status": "stopped"}
+
+
+# ------------------------------------------------ confirmation (guardrail 9.4) --
+
+class ConfirmBody(BaseModel):
+    run_id: str
+    confirmed: bool
+
+
+@app.post("/internal/confirm-tool")
+def confirm_tool(body: ConfirmBody) -> dict:
+    """User konfirmasi/tolak tool destructive yang menunggu (awaiting_confirmation)."""
+    row = db.query_one("SELECT status FROM workflow_runs WHERE id = %s", (body.run_id,))
+    if row is None:
+        raise HTTPException(404, "run tidak ditemukan")
+    if row["status"] != "awaiting_confirmation":
+        raise HTTPException(409, f"run status {row['status']} — tidak menunggu konfirmasi")
+    phase_row = db.query_one(
+        "SELECT phase FROM run_events WHERE run_id = %s ORDER BY id DESC LIMIT 1",
+        (body.run_id,))
+    phase = phase_row["phase"] if phase_row else "manual"
+    write_event(body.run_id, phase, "confirmation_result", {
+        "confirmed": bool(body.confirmed),
+    })
+    if not body.confirmed:
+        # tolak → kembali running, loop baca confirmation_result confirmed=false
+        db.execute("UPDATE workflow_runs SET status='running' WHERE id = %s", (body.run_id,))
+    else:
+        db.execute("UPDATE workflow_runs SET status='running' WHERE id = %s", (body.run_id,))
+    audit(None, "tool_confirmation", {
+        "run_id": body.run_id, "confirmed": body.confirmed,
+    }, run_id=body.run_id)
+    return {"ok": True, "confirmed": body.confirmed}
+
+
+@app.get("/internal/workers")
+def workers() -> dict:
+    """Jumlah AI loop aktif (topbar Workers)."""
+    with _workers_lock:
+        alive = [rid for rid, t in _workers.items() if t.is_alive()]
+        return {"active": len(alive), "run_ids": alive}

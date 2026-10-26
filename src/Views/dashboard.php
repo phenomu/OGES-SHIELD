@@ -10,7 +10,6 @@ $sparks     = MockData::sparklines();
 $stepper    = MockData::stepper();
 $ops        = MockData::operations();
 $secSum     = MockData::securitySummary();
-$aiLog      = MockData::aiLog();
 $inventory  = MockData::reconInventory();
 $timeline   = MockData::assetTimeline();
 $findings   = MockData::findings();
@@ -18,6 +17,15 @@ $pipeline   = MockData::modulePipeline();
 $engineP    = MockData::enginePanel();
 $envStatus  = MockData::environmentStatus();
 $firstFinding = $findings[0];
+
+// Phase 4: AI log pakai run terbaru (asli) milik user
+$user = Auth::user();
+$latestRun = Database::run(
+    'SELECT id, status FROM workflow_runs
+     WHERE ? = \'superadmin\' OR created_by = ?
+     ORDER BY created_at DESC LIMIT 1',
+    [$user['role'], (int) $user['id']]
+)->fetch();
 
 $icons = [
   'db'    => '<ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>',
@@ -168,20 +176,28 @@ function step_status_icon(string $status): string
         <h2 class="panel-title">AI Orchestration Log</h2>
         <p class="panel-subtitle">Live feed keputusan AI — tool selesai, ringkasan, &amp; pilihan berikutnya</p>
       </div>
-      <span class="badge badge-cyan"><span class="dot"></span>glm-5.3</span>
+      <?php if ($latestRun): ?>
+        <span class="badge badge-cyan"><span class="dot"></span>glm-5.3 · run <?= e(substr((string) $latestRun['id'], 0, 8)) ?></span>
+      <?php else: ?>
+        <span class="badge badge-cyan"><span class="dot"></span>glm-5.3</span>
+      <?php endif; ?>
     </div>
-    <div class="ailog">
-      <?php foreach ($aiLog as $entry): ?>
-        <div class="ailog-entry">
-          <span class="ailog-time"><?= $entry['time'] ?></span>
-          <div class="ailog-body">
-            <span class="ailog-tag <?= $entry['type'] ?>"><?= $entry['type'] === 'ai_decision' ? 'AI DECISION' : 'TOOL DONE' ?></span>
-            <span class="ailog-tool"><?= htmlspecialchars($entry['tool']) ?></span>
-            <p class="ailog-text"><?= htmlspecialchars($entry['type'] === 'ai_decision' ? $entry['reasoning'] : $entry['summary']) ?></p>
-          </div>
+    <?php if ($latestRun): ?>
+    <div class="ailog" data-ai-log-run="<?= e((string) $latestRun['id']) ?>">
+      <div class="ailog-entry">
+        <span class="ailog-time">--:--:--</span>
+        <div class="ailog-body">
+          <span class="ailog-tag ai_decision">AI DECISION</span>
+          <span class="ailog-tool">stream</span>
+          <p class="ailog-text">menghubungkan ke event stream run terbaru…</p>
         </div>
-      <?php endforeach; ?>
+      </div>
     </div>
+    <?php else: ?>
+    <div class="ailog">
+      <div class="ailog-empty">Belum ada run — buat lewat Automation Workflows.</div>
+    </div>
+    <?php endif; ?>
   </section>
 
   <section class="panel">

@@ -67,6 +67,7 @@ $router->add('POST', '/targets/scope',    'ctrl:TargetController@toggleScope');
 // Admin (wajib superadmin — guard di bawah + di controller)
 $router->add('GET',  '/admin/approvals',    'ctrl:AdminController@approvals');
 $router->add('GET',  '/admin/tool-registry', 'admin/tool-registry');
+$router->add('POST', '/admin/tool-registry/save', 'ctrl:ToolRegistryController@save');
 $router->add('POST', '/admin/approve',      'ctrl:AdminController@approve');
 $router->add('POST', '/admin/reject',       'ctrl:AdminController@reject');
 

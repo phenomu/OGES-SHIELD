@@ -46,17 +46,18 @@ final class RunController
         ]);
         $resp = self::orchestratorPost('/runs', $body);
 
-        if ($resp === null || ($resp['status'] ?? '') !== 'pending') {
+        $runId = is_array($resp) ? (string) ($resp['run_id'] ?? '') : '';
+        if ($runId === '' || !preg_match('/^[a-f0-9-]{36}$/', $runId)) {
             Session::flash('wf_error', 'Gagal membuat run di orchestrator: ' .
                 ($resp['detail'] ?? 'orchestrator tidak merespons'));
             redirect('/workflows');
         }
 
         Audit::log((int) $user['id'], 'run_started', [
-            'run_id' => $resp['run_id'], 'template' => $templateSlug,
+            'run_id' => $runId, 'template' => $templateSlug,
             'target' => $target['value'],
         ]);
-        redirect('/run?id=' . urlencode((string) $resp['run_id']));
+        redirect('/run?id=' . urlencode($runId));
     }
 
     /** GET /run?id=... — halaman live run. */

@@ -9,8 +9,8 @@
 > - Target total: **10–14 hari kerja**. Estimasi hari per phase adalah PANDUAN, boleh geser asal
 >   urutan prioritas (UI/UX dulu, backend belakangan) tetap dipegang.
 
-**Status project saat ini:** 🟡 Phase 3 selesai (orchestrator + eksekusi tool nyata + live
-streaming E2E terverifikasi; menunggu approval user untuk Phase 4 — AI orchestration loop).
+**Status project saat ini:** 🟡 Phase 4 selesai (AI orchestration loop autonomous E2E terverifikasi
+di low.my.id; menunggu approval user untuk Phase 5 — findings, overall summary & report.pdf).
 
 ---
 
@@ -204,22 +204,50 @@ server, hasilnya masuk DB, dan progress-nya kelihatan live di dashboard (bukan d
 
 ## Phase 4 — AI Orchestration Loop (🟣, estimasi 2 hari)
 
-- [ ] `ai/client.py` — wrapper panggilan GLM-5.3 (base_url, api_key dari `.env`, model id,
+- [x] `ai/client.py` — wrapper panggilan GLM-5.3 (base_url, api_key dari `.env`, model id,
       fungsi `chat_with_tools(messages, tools, tool_choice)`), fallback otomatis ke `glm-5.2` kalau
       `glm-5.3` error/timeout
-- [ ] Generate `tools` param (OpenAI function-calling schema) otomatis dari `tools.json` yang valid
+      Catatan: model id `nr/glm-5.3` / fallback `nr/glm-5.2` (verifikasi via /models).
+      Retry order: primary → primary → fallback. Fix 9router: body respons hybrid
+      `JSON + data: [DONE]` → parser strip sufiks SSE. Tool-calling teruji.
+- [x] Generate `tools` param (OpenAI function-calling schema) otomatis dari `tools.json` yang valid
       untuk phase aktif
-- [ ] `ai/loop.py` — implementasi loop sesuai pseudocode Bagian 5 `PROMPT.md`: pilih tool → eksekusi
+      Catatan: `_tools_param()` — AI hanya melihat schema (nama/deskripsi/parameter),
+      TIDAK pernah melihat command_template (guardrail 9.2). Plus opsi `mark_phase_complete`.
+- [x] `ai/loop.py` — implementasi loop sesuai pseudocode Bagian 5 `PROMPT.md`: pilih tool → eksekusi
       → summary → pilih lagi → sampai `mark_phase_complete` atau safety limit
       (`max_tool_calls_per_phase`, `max_time_per_phase_seconds` — **wajib ada, test harus bisa
       membuktikan loop tidak bisa infinite**)
-- [ ] Event `ai_summary` & `ai_decision` ditulis ke `run_events` → tampil di panel AI Orchestration
+      Catatan: loop dijalankan thread per run (spawn dari POST /runs). E2E low.my.id:
+      subfinder 13 subdomain → ai_summary → httpx pakai artefak subfinder_hosts.txt
+      (loop persist output → file, AI diberi path) → ai_summary → mark_phase_complete →
+      2 phase → run completed — FULL AUTONOMOUS tanpa campur tangan.
+      AI self-correction teruji: param out-of-scope → security_event masuk running summary
+      → AI koreksi param sendiri → sukses. Stuck-guard: 3 scope violation beruntun →
+      phase_complete demi safety. **Safety-limit proof**: override MAX_TOOL_CALLS_PER_PHASE=2
+      → phase auto-complete "safety limit tercapai" → run completed — infinite impossible.
+- [x] Event `ai_summary` & `ai_decision` ditulis ke `run_events` → tampil di panel AI Orchestration
       Log (yang di Phase 1 masih dummy)
-- [ ] Tool `risk_level: destructive` → pause run, tunggu konfirmasi user di UI sebelum lanjut
-- [ ] `admin/tool-registry.php` fungsional: edit `tools.json` dari UI (form atau JSON editor dengan
+      Catatan: dashboard AI log panel sekarang polling event run terbaru (data asli);
+      terminal run page + stepper live + module card live (fmtEvent semua tipe baru).
+- [x] Tool `risk_level: destructive` → pause run, tunggu konfirmasi user di UI sebelum lanjut
+      Catatan: run → `awaiting_confirmation` + event `confirmation_required` → modal auto-open
+      di halaman run → POST /api/confirm-tool.php (auth+ownership+CSRF) → orchestrator
+      /internal/confirm-tool. User tolak → tool_skipped + tool di-exclude dari pool phase
+      (AI tidak bisa pilih lagi). E2E teruji: nuclei jalan → sqli destructive pause → user
+      tolak → skipped → lanjut.
+- [x] `admin/tool-registry.php` fungsional: edit `tools.json` dari UI (form atau JSON editor dengan
       validasi), simpan, trigger `POST /internal/reload-tools`
-- [ ] Test end-to-end: "Set Workflow" dari UI → AI jalan sendiri lintas 2–3 tool berturutan tanpa
+      Catatan: ToolRegistryController — toggle enabled (AI tak melihat tool OFF), rotate risk
+      (safe→intrusive→destructive, destructive auto requires_confirmation), raw JSON editor.
+      Semua perubahan: tulis file → reload orchestrator → kalau registry reject, file di-REVERT
+      (tidak ada tools.json rusak menetap). Teruji roundtrip nuclei OFF→ON, sqli risk rotate.
+- [x] Test end-to-end: "Set Workflow" dari UI → AI jalan sendiri lintas 2–3 tool berturutan tanpa
       campur tangan manual → selesai di `mark_phase_complete`
+      Catatan: 3 run E2E browser: (1) low.my.id subfinder→httpx→complete autonomous,
+      (2) target URL subfinder self-correct → complete, (3) full-web-app nuclei → sqli
+      destructive pause → tolak → lanjut. Set Workflow dari form UI → redirect halaman run →
+      semua event live (terminal/stepper/module/badge/AI log).
 
 **Definition of Done Phase 4:** fitur inti produk (Set Workflow → AI pilih & jalankan tools
 bergantian → summary tiap langkah) bekerja end-to-end minimal untuk 1 phase workflow (mis.

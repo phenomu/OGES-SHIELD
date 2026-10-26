@@ -1,123 +1,123 @@
 {
-  "tools": [
-    {
-      "id": "subfinder",
-      "name": "Subfinder — Subdomain Discovery",
-      "category": "recon",
-      "valid_phases": [
-        "reconnaissance"
-      ],
-      "risk_level": "safe",
-      "command_template": "subfinder -d {domain} -silent -json",
-      "input_schema": {
-        "type": "object",
-        "properties": {
-          "domain": {
-            "type": "string"
-          }
+    "tools": [
+        {
+            "id": "subfinder",
+            "name": "Subfinder — Subdomain Discovery",
+            "category": "recon",
+            "valid_phases": [
+                "reconnaissance"
+            ],
+            "risk_level": "safe",
+            "command_template": "subfinder -d {domain} -silent -json",
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "domain": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "domain"
+                ]
+            },
+            "output_parser": "jsonlines",
+            "timeout_seconds": 120,
+            "enabled": true,
+            "description": "Mencari subdomain dari domain target secara pasif. Gunakan di awal phase reconnaissance."
         },
-        "required": [
-          "domain"
-        ]
-      },
-      "output_parser": "jsonlines",
-      "timeout_seconds": 120,
-      "enabled": true,
-      "description": "Mencari subdomain dari domain target secara pasif. Gunakan di awal phase reconnaissance."
-    },
-    {
-      "id": "httpx",
-      "name": "httpx — Live Host Probe",
-      "category": "recon",
-      "valid_phases": [
-        "reconnaissance",
-        "service_enumeration"
-      ],
-      "risk_level": "safe",
-      "command_template": "httpx -l {input_file} -json -status-code -title -tech-detect",
-      "input_schema": {
-        "type": "object",
-        "properties": {
-          "input_file": {
-            "type": "string",
-            "description": "Path file daftar host (absolute atau relatif cwd orchestrator)"
-          }
+        {
+            "id": "httpx",
+            "name": "httpx — Live Host Probe",
+            "category": "recon",
+            "valid_phases": [
+                "reconnaissance",
+                "service_enumeration"
+            ],
+            "risk_level": "safe",
+            "command_template": "httpx -l {input_file} -json -status-code -title -tech-detect",
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "input_file": {
+                        "type": "string",
+                        "description": "Path file daftar host (absolute atau relatif cwd orchestrator)"
+                    }
+                },
+                "required": [
+                    "input_file"
+                ]
+            },
+            "output_parser": "jsonlines",
+            "timeout_seconds": 180,
+            "enabled": true,
+            "description": "Probe daftar host/subdomain untuk cek mana yang live, ambil status code, title, dan tech stack."
         },
-        "required": [
-          "input_file"
-        ]
-      },
-      "output_parser": "jsonlines",
-      "timeout_seconds": 180,
-      "enabled": true,
-      "description": "Probe daftar host/subdomain untuk cek mana yang live, ambil status code, title, dan tech stack."
-    },
-    {
-      "id": "nuclei",
-      "name": "Nuclei — Vulnerability Scan",
-      "category": "vulnerability",
-      "valid_phases": [
-        "vulnerability_assessment"
-      ],
-      "risk_level": "intrusive",
-      "command_template": "nuclei -u {target_url} -j -severity {severity_filter}",
-      "input_schema": {
-        "type": "object",
-        "properties": {
-          "target_url": {
-            "type": "string"
-          },
-          "severity_filter": {
-            "type": "string",
-            "enum": [
-              "low",
-              "medium",
-              "high",
-              "critical",
-              "unknown"
-            ]
-          }
+        {
+            "id": "nuclei",
+            "name": "Nuclei — Vulnerability Scan",
+            "category": "vulnerability",
+            "valid_phases": [
+                "vulnerability_assessment"
+            ],
+            "risk_level": "intrusive",
+            "command_template": "nuclei -u {target_url} -j -severity {severity_filter}",
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "target_url": {
+                        "type": "string"
+                    },
+                    "severity_filter": {
+                        "type": "string",
+                        "enum": [
+                            "low",
+                            "medium",
+                            "high",
+                            "critical",
+                            "unknown"
+                        ]
+                    }
+                },
+                "required": [
+                    "target_url",
+                    "severity_filter"
+                ]
+            },
+            "output_parser": "jsonlines",
+            "timeout_seconds": 600,
+            "enabled": true,
+            "description": "Scan kerentanan berbasis template signature pada target. Hasil langsung dipetakan ke tabel findings."
         },
-        "required": [
-          "target_url",
-          "severity_filter"
-        ]
-      },
-      "output_parser": "jsonlines",
-      "timeout_seconds": 600,
-      "enabled": true,
-      "description": "Scan kerentanan berbasis template signature pada target. Hasil langsung dipetakan ke tabel findings."
-    },
-    {
-      "id": "custom_sqli_probe",
-      "name": "Custom SQLi Probe (Python)",
-      "category": "vulnerability",
-      "valid_phases": [
-        "vulnerability_assessment",
-        "exploitation_validation"
-      ],
-      "risk_level": "intrusive",
-      "command_template": "python3 {script_path} --url {target_url}",
-      "input_schema": {
-        "type": "object",
-        "properties": {
-          "target_url": {
-            "type": "string"
-          },
-          "script_path": {
-            "type": "string",
-            "description": "Absolute path sqli_probe.py (diisi orchestrator)"
-          }
-        },
-        "required": [
-          "target_url",
-          "script_path"
-        ]
-      },
-      "output_parser": "json",
-      "timeout_seconds": 300,
-      "enabled": true,
-      "description": "Tool custom tim sendiri untuk validasi SQL injection pada parameter yang dicurigai."
-    }
-  ]
+        {
+            "id": "custom_sqli_probe",
+            "name": "Custom SQLi Probe (Python)",
+            "category": "vulnerability",
+            "valid_phases": [
+                "vulnerability_assessment",
+                "exploitation_validation"
+            ],
+            "risk_level": "intrusive",
+            "command_template": "python3 {script_path} --url {target_url}",
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "target_url": {
+                        "type": "string"
+                    },
+                    "script_path": {
+                        "type": "string",
+                        "description": "Absolute path sqli_probe.py (diisi orchestrator)"
+                    }
+                },
+                "required": [
+                    "target_url",
+                    "script_path"
+                ]
+            },
+            "output_parser": "json",
+            "timeout_seconds": 300,
+            "enabled": true,
+            "description": "Tool custom tim sendiri untuk validasi SQL injection pada parameter yang dicurigai."
+        }
+    ]
 }
