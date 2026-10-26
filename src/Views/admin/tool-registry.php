@@ -4,7 +4,7 @@
  * Phase 4: tulis balik ke file + POST /internal/reload-tools.
  */
 View::$pageTitle = 'Tool Registry — OGES-SHIELD';
-View::$activeNav = 'toolregistry';
+View::$activeNav = ($_GET['nav'] ?? 'toolregistry');
 
 $toolsJson = file_get_contents(BASE_PATH . '/orchestrator/config/tools.json');
 $tools = json_decode($toolsJson, true)['tools'] ?? [];

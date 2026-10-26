@@ -4,22 +4,22 @@
  * Key = key route/match View::$activeNav.
  */
 $nav = [
-    ['key' => 'overview',   'label' => 'Overview',              'href' => '/dashboard.php', 'icon' => 'grid'],
-    ['key' => 'operations', 'label' => 'Operations',            'href' => '/dashboard.php#operations', 'icon' => 'activity'],
-    ['key' => 'assets',     'label' => 'Asset Discovery',       'href' => '/assets.php',    'icon' => 'db'],
-    ['key' => 'recon',      'label' => 'Reconnaissance',        'href' => '/recon.php',     'icon' => 'radar'],
-    ['key' => 'vulns',      'label' => 'Vulnerability Assessment', 'href' => '/vulnerabilities.php', 'icon' => 'shield-alert'],
-    ['key' => 'exploit',    'label' => 'Exploitation Validation', 'href' => '/vulnerabilities.php?tab=exploit', 'icon' => 'crosshair'],
-    ['key' => 'persistence','label' => 'Persistence Simulation',  'href' => '/vulnerabilities.php?tab=persistence', 'icon' => 'link'],
-    ['key' => 'findings',   'label' => 'Findings',              'href' => '/findings.php',  'icon' => 'list-alert'],
-    ['key' => 'reports',    'label' => 'Reports',               'href' => '/reports.php',   'icon' => 'file-text'],
-    ['key' => 'workflows',  'label' => 'Automation Workflows',  'href' => '/workflows.php', 'icon' => 'workflow'],
-    ['key' => 'modules',    'label' => 'Python/Tool Modules',   'href' => '/admin/tool-registry.php', 'icon' => 'cpu'],
-    ['key' => 'audit',      'label' => 'Audit Logs',            'href' => '/dashboard.php#audit', 'icon' => 'scroll'],
+    ['key' => 'overview',   'label' => 'Overview',              'href' => '/dashboard', 'icon' => 'grid'],
+    ['key' => 'operations', 'label' => 'Operations',            'href' => '/dashboard?nav=operations', 'icon' => 'activity'],
+    ['key' => 'assets',     'label' => 'Asset Discovery',       'href' => '/assets',    'icon' => 'db'],
+    ['key' => 'recon',      'label' => 'Reconnaissance',        'href' => '/recon',     'icon' => 'radar'],
+    ['key' => 'vulns',      'label' => 'Vulnerability Assessment', 'href' => '/vulnerabilities', 'icon' => 'shield-alert'],
+    ['key' => 'exploit',    'label' => 'Exploitation Validation', 'href' => '/exploitation', 'icon' => 'crosshair'],
+    ['key' => 'persistence','label' => 'Persistence Simulation',  'href' => '/persistence', 'icon' => 'link'],
+    ['key' => 'findings',   'label' => 'Findings',              'href' => '/findings',  'icon' => 'list-alert'],
+    ['key' => 'reports',    'label' => 'Reports',               'href' => '/reports',   'icon' => 'file-text'],
+    ['key' => 'workflows',  'label' => 'Automation Workflows',  'href' => '/workflows', 'icon' => 'workflow'],
+    ['key' => 'modules',    'label' => 'Python/Tool Modules',   'href' => '/admin/tool-registry?nav=modules', 'icon' => 'cpu'],
+    ['key' => 'audit',      'label' => 'Audit Logs',            'href' => '/audit', 'icon' => 'scroll'],
 ];
 $adminNav = [
-    ['key' => 'approvals',    'label' => 'Approvals',     'href' => '/admin/approvals.php', 'icon' => 'user-check'],
-    ['key' => 'toolregistry', 'label' => 'Tool Registry', 'href' => '/admin/tool-registry.php', 'icon' => 'wrench'],
+    ['key' => 'approvals',    'label' => 'Approvals',     'href' => '/admin/approvals', 'icon' => 'user-check'],
+    ['key' => 'toolregistry', 'label' => 'Tool Registry', 'href' => '/admin/tool-registry', 'icon' => 'wrench'],
 ];
 $icons = [
     'grid'         => '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>',
@@ -60,7 +60,7 @@ $active = View::$activeNav;
     <?php endif; ?>
 
     <div class="nav-section">SETTINGS</div>
-    <a href="/dashboard.php#settings" class="nav-item<?= $active === 'settings' ? ' active' : '' ?>" data-nav="settings">
+    <a href="/settings" class="nav-item<?= $active === 'settings' ? ' active' : '' ?>" data-nav="settings">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><?= $icons['settings'] ?></svg>
       <span class="nav-label">Settings</span>
     </a>

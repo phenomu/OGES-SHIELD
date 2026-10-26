@@ -3,7 +3,7 @@
  * dashboard.php — Overview (Bagian 4.3 – 4.9). Semua data dummy Phase 1.
  */
 View::$pageTitle = 'Overview — OGES-SHIELD';
-View::$activeNav = 'overview';
+View::$activeNav = ($_GET['nav'] ?? 'overview');
 
 $stats      = MockData::statCards();
 $sparks     = MockData::sparklines();

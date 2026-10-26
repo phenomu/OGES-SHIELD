@@ -99,6 +99,11 @@ user untuk Phase 2). Key AI router terisi & model id terverifikasi: `nr/glm-5.3`
 - [x] `admin/approvals.php` — tabel user pending dummy + tombol approve/reject (dummy)
 - [x] `admin/tool-registry.php` — tampilkan isi `tools.json` contoh dalam bentuk tabel/editor
       (belum perlu nulis ke file asli)
+- [x] Halaman `exploitation.php` + `persistence.php` + `audit.php` + `settings.php`
+      Catatan (post-review user): halaman ini tidak ada di list task 1D tapi sidebar sudah
+      menautkannya — dibuat dummy agar tidak ada menu mati. Active-state sidebar salah
+      (semua menu → vulns) juga diperbaiki: tiap halaman punya `activeNav` sendiri,
+      `?nav=` override untuk kasus menu→halaman bersama (operations, modules).
 
 ### 1E. Review UI/UX
 - [x] Screenshot tiap halaman utama, bandingkan sisi-demi-sisi dengan referensi desain

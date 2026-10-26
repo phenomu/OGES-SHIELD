@@ -39,6 +39,10 @@ $router->add('GET', '/reports', 'reports');
 $router->add('GET', '/login', 'auth:login');
 $router->add('GET', '/register', 'auth:register');
 $router->add('GET', '/pending-approval', 'auth:pending-approval');
+$router->add('GET', '/exploitation', 'exploitation');
+$router->add('GET', '/persistence', 'persistence');
+$router->add('GET', '/audit', 'audit');
+$router->add('GET', '/settings', 'settings');
 
 // Admin (dummy Phase 1; guard superadmin server-side menyusul Phase 2)
 $router->add('GET', '/admin/approvals', 'admin/approvals');
