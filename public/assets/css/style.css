@@ -1,0 +1,66 @@
+/* ==========================================================================
+   OGES-SHIELD — base stylesheet (Phase 0: boot screen + reset).
+   Komponen dashboard ditambah di Phase 1 di file komponen terpisah.
+   ========================================================================== */
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--bg-body);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: var(--fs-base);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+code, .mono {
+  font-family: var(--font-mono);
+}
+
+a { color: var(--accent-cyan); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* --- Boot / placeholder screen --- */
+.boot-screen {
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+}
+
+.boot {
+  text-align: center;
+  border: 1px solid var(--border-glow-cyan);
+  border-radius: var(--r-lg);
+  background: var(--bg-panel);
+  padding: var(--sp-10) var(--sp-10);
+  box-shadow: var(--glow-cyan);
+}
+
+.boot-logo {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xl);
+  font-weight: 700;
+  letter-spacing: 0.35em;
+  color: var(--accent-cyan);
+  text-shadow: var(--glow-cyan);
+}
+
+.boot-tagline {
+  margin: var(--sp-3) 0 0;
+  font-size: var(--fs-xxs);
+  letter-spacing: 0.25em;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.boot-note {
+  margin-top: var(--sp-6);
+  color: var(--text-secondary);
+  font-size: var(--fs-sm);
+}
