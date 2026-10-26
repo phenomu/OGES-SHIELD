@@ -9,8 +9,8 @@
 > - Target total: **10–14 hari kerja**. Estimasi hari per phase adalah PANDUAN, boleh geser asal
 >   urutan prioritas (UI/UX dulu, backend belakangan) tetap dipegang.
 
-**Status project saat ini:** 🟢 Phase 1 approved (2026-10-26) — Phase 2 (Auth & RBAC nyata)
-sedang dikerjakan.
+**Status project saat ini:** 🟡 Phase 2 selesai (auth & RBAC nyata, E2E terverifikasi;
+menunggu approval user untuk Phase 3 — orchestrator & eksekusi tools nyata).
 
 ---
 
