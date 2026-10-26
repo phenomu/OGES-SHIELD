@@ -73,6 +73,7 @@ final class RunController
             'SELECT r.id, r.status, r.current_phase, r.created_at, r.started_at, r.finished_at,
                     t.name AS target_name, t.value AS target_value, t.environment,
                     wt.name AS template_name, wt.slug AS template_slug,
+                    wt.phases AS template_phases,
                     u.username AS created_by_username
              FROM workflow_runs r
              JOIN targets t ON t.id = r.target_id
@@ -92,7 +93,7 @@ final class RunController
             return;
         }
         // phases snapshot utk stepper + tool pool utk module pipeline
-        $phases = json_decode((string) $run['phases'] ?? '', true) ?: [];
+        $phases = json_decode((string) ($run['template_phases'] ?? ''), true) ?: [];
         View::page('run', [
             'run'         => $run,
             'runId'       => $runId,
