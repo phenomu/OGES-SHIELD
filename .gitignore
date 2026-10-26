@@ -1,0 +1,23 @@
+# root
+.env
+.env.php
+*.log
+
+# orchestrator
+orchestrator/.env
+orchestrator/venv/
+orchestrator/__pycache__/
+**/__pycache__/
+
+# binari Go tools (diinstall via scripts/setup.sh, jangan commit)
+bin/
+
+# storage runtime (reports, bukti tool output)
+storage/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/
