@@ -1,7 +1,8 @@
 <?php
 /**
  * Router sederhana (front-controller pattern).
- * Route = [method, path, handler]; handler = nama view template di src/Views/.
+ * Route = [method, path, handler]; handler = nama view template di src/Views/
+ * atau "json:<endpoint>" untuk endpoint JSON.
  */
 
 declare(strict_types=1);
@@ -18,8 +19,21 @@ final class Router
 
     public function dispatch(string $method, string $path): void
     {
-        $key = strtoupper($method) . ' ' . $path;
-        $handler = $this->routes[$key] ?? null;
+        // Normalisasi path dengan atau tanpa .php (dashboard.php ≡ /dashboard)
+        $variants = [$path];
+        $pathNoExt = preg_replace('/\.php$/', '', $path);
+        if ($pathNoExt !== $path) {
+            $variants[] = $pathNoExt;
+            $variants[] = $pathNoExt . '.php';
+        }
+
+        $handler = null;
+        foreach ($variants as $v) {
+            $handler = $this->routes[strtoupper($method) . ' ' . $v] ?? null;
+            if ($handler !== null) {
+                break;
+            }
+        }
 
         if ($handler === null) {
             http_response_code(404);
@@ -27,10 +41,10 @@ final class Router
             return;
         }
 
-        // Health endpoint = JSON, bukan HTML
-        if ($handler === 'health') {
+        // Endpoint JSON (API internal untuk JS)
+        if (str_starts_with($handler, 'json:')) {
             header('Content-Type: application/json');
-            echo json_encode(['status' => 'ok', 'app' => 'oges-shield-php']);
+            echo json_encode(['status' => 'ok', 'endpoint' => substr($handler, 5)]);
             return;
         }
 
