@@ -63,11 +63,15 @@ $envs = ['lab' => 'LAB', 'staging' => 'STAGING', 'production' => 'PRODUCTION'];
       <span class="notif-badge"><?= $engine['notifications'] ?></span>
     </button>
     <div class="user-chip">
-      <span class="avatar" aria-hidden="true">CR</span>
+      <span class="avatar" aria-hidden="true"><?= e(Auth::user()['username'] ? strtoupper(substr((string) Auth::user()['username'], 0, 2)) : 'CR') ?></span>
       <span class="user-meta">
-        <span class="user-name"><?= htmlspecialchars($engine['user']['name']) ?></span>
-        <span class="user-role"><?= htmlspecialchars($engine['user']['role']) ?></span>
+        <span class="user-name"><?= e(Auth::user()['name'] ?? $engine['user']['name']) ?></span>
+        <span class="user-role"><?= e(Auth::roleLabel((string) (Auth::user()['role'] ?? 'user'))) ?></span>
       </span>
     </div>
+    <form method="post" action="/logout" style="display:inline">
+      <input type="hidden" name="csrf" value="<?= e(Session::csrf()) ?>">
+      <button type="submit" class="btn btn-sm" title="Keluar">Logout</button>
+    </form>
   </div>
 </header>

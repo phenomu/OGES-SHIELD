@@ -2,10 +2,6 @@
 /**
  * OGES-SHIELD — front controller.
  * Semua request HTTP lewat sini (DocumentRoot = public/).
- * Router sederhana buatan sendiri, tanpa framework.
- *
- * Catatan routing: php -S tidak rewrite /dashboard → /dashboard.php,
- * jadi Router normalisasi ekstensi .php otomatis.
  */
 
 declare(strict_types=1);
@@ -21,41 +17,73 @@ if (PHP_SAPI === 'cli-server') {
     }
 }
 
-require BASE_PATH . '/src/Core/Router.php';
-require BASE_PATH . '/src/Core/View.php';
-require BASE_PATH . '/src/Mock/MockData.php';
+// Autoload sederhana per konvensi folder (tanpa composer).
+spl_autoload_register(static function (string $class): void {
+    foreach (['Core', 'Models', 'Controllers', 'Mock'] as $dir) {
+        $file = BASE_PATH . '/src/' . $dir . '/' . $class . '.php';
+        if (is_file($file)) {
+            require $file;
+            return;
+        }
+    }
+});
+require BASE_PATH . '/src/Core/functions.php';
+
+Env::load(BASE_PATH . '/.env');
+Session::start();
 
 $router = new Router();
 
-// --- Route map (Phase 1: halaman UI dummy) ---
-$router->add('GET', '/', 'dashboard');           // home = overview dashboard
-$router->add('GET', '/dashboard', 'dashboard');
-$router->add('GET', '/assets', 'assets');
-$router->add('GET', '/recon', 'recon');
-$router->add('GET', '/vulnerabilities', 'vulnerabilities');
-$router->add('GET', '/workflows', 'workflows');
-$router->add('GET', '/findings', 'findings');
-$router->add('GET', '/reports', 'reports');
-$router->add('GET', '/login', 'auth:login');
-$router->add('GET', '/register', 'auth:register');
-$router->add('GET', '/pending-approval', 'auth:pending-approval');
-$router->add('GET', '/exploitation', 'exploitation');
-$router->add('GET', '/persistence', 'persistence');
-$router->add('GET', '/audit', 'audit');
-$router->add('GET', '/settings', 'settings');
+// --- Route map ---
 
-// Admin (dummy Phase 1; guard superadmin server-side menyusul Phase 2)
-$router->add('GET', '/admin/approvals', 'admin/approvals');
-$router->add('GET', '/admin/tool-registry', 'admin/tool-registry');
+// Publik (tanpa login)
+$router->add('GET',  '/',                 'ctrl:AuthController@showLogin');
+$router->add('GET',  '/login',            'ctrl:AuthController@showLogin');
+$router->add('POST', '/login',            'ctrl:AuthController@login');
+$router->add('GET',  '/register',         'ctrl:AuthController@showRegister');
+$router->add('POST', '/register',         'ctrl:AuthController@register');
+$router->add('GET',  '/pending-approval', 'auth:pending-approval');
+$router->add('GET',  '/health',           'health');
 
-// API placeholder (data nyata Phase 3+)
-$router->add('GET', '/api/stream', 'json:stream');
-$router->add('GET', '/api/workflows', 'json:workflows');
-$router->add('GET', '/api/findings', 'json:findings');
+// Aplikasi (wajib login — guard di bawah)
+$router->add('GET',  '/dashboard',        'dashboard');
+$router->add('GET',  '/assets',           'assets');
+$router->add('GET',  '/recon',            'recon');
+$router->add('GET',  '/vulnerabilities',  'vulnerabilities');
+$router->add('GET',  '/workflows',        'workflows');
+$router->add('GET',  '/findings',         'findings');
+$router->add('GET',  '/reports',          'reports');
+$router->add('GET',  '/exploitation',     'exploitation');
+$router->add('GET',  '/persistence',      'persistence');
+$router->add('GET',  '/audit',            'audit');
+$router->add('GET',  '/settings',         'settings');
+$router->add('POST', '/logout',           'ctrl:AuthController@logout');
 
-$router->add('GET', '/health', 'health');
+// Admin (wajib superadmin — guard di bawah + di controller)
+$router->add('GET',  '/admin/approvals',    'ctrl:AdminController@approvals');
+$router->add('GET',  '/admin/tool-registry', 'admin/tool-registry');
+$router->add('POST', '/admin/approve',      'ctrl:AdminController@approve');
+$router->add('POST', '/admin/reject',       'ctrl:AdminController@reject');
+
+// API (data nyata Phase 3+; sementara placeholder JSON)
+$router->add('GET',  '/api/stream',     'json:stream');
+$router->add('GET',  '/api/workflows',  'json:workflows');
+$router->add('GET',  '/api/findings',   'json:findings');
+
+// --- Guard server-side (Bagian 7: role check di server, bukan cuma UI) ---
+$path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH) ?: '/';
+$publicPaths = ['/', '/login', '/register', '/pending-approval', '/health'];
+
+if (!in_array($path, $publicPaths, true)) {
+    Auth::requireLogin();
+    if (str_starts_with($path, '/admin/') && !Auth::isSuperadmin()) {
+        http_response_code(403);
+        View::page('403');
+        exit;
+    }
+}
 
 $router->dispatch(
     method: $_SERVER['REQUEST_METHOD'],
-    path: parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH) ?: '/'
+    path:   $path,
 );

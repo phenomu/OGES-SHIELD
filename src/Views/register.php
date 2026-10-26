@@ -1,8 +1,15 @@
 <?php
 /**
- * register.php — Bagian 4.10. Phase 1: dummy (submit → pending-approval).
+ * register.php — Bagian 4.10. Phase 2: insert nyata role=pending (POST → AuthController::register).
  */
 View::$pageTitle = 'Register — OGES-SHIELD';
+
+$registerError = Session::flash('register_error');
+$old = Session::flash('register_old') ?? [];
+$oldName  = $old['name']     ?? '';
+$oldUser  = $old['username'] ?? '';
+$oldEmail = $old['email']    ?? '';
+$oldReason= $old['reason']   ?? '';
 ?>
 <div class="auth-card" style="max-width: 460px">
   <div class="auth-logo">
@@ -14,20 +21,25 @@ View::$pageTitle = 'Register — OGES-SHIELD';
     <span class="al-tag">REQUEST PLATFORM ACCESS</span>
   </div>
 
+  <?php if ($registerError): ?>
+    <div class="auth-alert error" style="margin-bottom: var(--sp-4)"><?= e($registerError) ?></div>
+  <?php endif; ?>
+
   <form class="auth-form" method="post" action="/register" data-register-form>
+    <input type="hidden" name="csrf" value="<?= e(Session::csrf()) ?>">
     <div style="display:grid; grid-template-columns:1fr 1fr; gap: var(--sp-3)">
       <div class="form-field">
         <label class="form-label" for="reg-name">NAMA LENGKAP</label>
-        <input class="input" type="text" id="reg-name" name="name" placeholder="Nama kamu" required>
+        <input class="input" type="text" id="reg-name" name="name" placeholder="Nama kamu" value="<?= e($oldName) ?>" required>
       </div>
       <div class="form-field">
         <label class="form-label" for="reg-username">USERNAME</label>
-        <input class="input mono" type="text" id="reg-username" name="username" placeholder="operator01" required pattern="[a-zA-Z0-9_.]{3,60}">
+        <input class="input mono" type="text" id="reg-username" name="username" placeholder="operator01" value="<?= e($oldUser) ?>" required pattern="[a-zA-Z0-9_.]{3,60}">
       </div>
     </div>
     <div class="form-field">
       <label class="form-label" for="reg-email">EMAIL</label>
-      <input class="input mono" type="email" id="reg-email" name="email" placeholder="kamu@team.id" required>
+      <input class="input mono" type="email" id="reg-email" name="email" placeholder="kamu@team.id" value="<?= e($oldEmail) ?>" required>
     </div>
     <div class="form-field">
       <label class="form-label" for="reg-password">PASSWORD</label>
@@ -36,7 +48,7 @@ View::$pageTitle = 'Register — OGES-SHIELD';
     </div>
     <div class="form-field">
       <label class="form-label" for="reg-reason">ALASAN / JUSTIFIKASI AKSES</label>
-      <textarea class="textarea" id="reg-reason" name="reason" placeholder="Contoh: pentester tim red untuk engagement Kartika, butuh akses scan target in-scope." required minlength="20"></textarea>
+      <textarea class="textarea" id="reg-reason" name="reason" placeholder="Contoh: pentester tim red untuk engagement Kartika, butuh akses scan target in-scope." required minlength="20"><?= e($oldReason) ?></textarea>
       <span class="form-hint">Dilihat superadmin saat menilai approval (min. 20 karakter).</span>
     </div>
     <button type="submit" class="btn btn-primary" style="padding: 10px">Request Access</button>
@@ -44,26 +56,3 @@ View::$pageTitle = 'Register — OGES-SHIELD';
 
   <p class="auth-foot">Sudah punya akun? <a href="/login">Login</a></p>
 </div>
-
-<script>
-(function () {
-  var form = document.querySelector("[data-register-form]");
-  if (!form) return;
-  form.addEventListener("submit", function (e) {
-    e.preventDefault();
-    var errs = [];
-    var name = form.querySelector("#reg-name").value.trim();
-    var user = form.querySelector("#reg-username").value.trim();
-    var email = form.querySelector("#reg-email").value.trim();
-    var pw = form.querySelector("#reg-password").value;
-    var reason = form.querySelector("#reg-reason").value.trim();
-    if (name.length < 3) errs.push("Nama minimal 3 karakter.");
-    if (!/^[a-zA-Z0-9_.]{3,60}$/.test(user)) errs.push("Username 3-60 karakter (huruf/angka/_/.).");
-    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) errs.push("Email tidak valid.");
-    if (pw.length < 8) errs.push("Password minimal 8 karakter.");
-    if (reason.length < 20) errs.push("Justifikasi akses minimal 20 karakter.");
-    if (errs.length) { alert(errs.join("\n")); return; }
-    window.location.href = "/pending-approval";
-  });
-})();
-</script>

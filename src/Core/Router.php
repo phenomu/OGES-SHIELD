@@ -4,6 +4,7 @@
  * Handler format:
  *   "page:<template>"  — render di dalam app shell (topbar+sidebar)
  *   "auth:<template>"  — render di dalam auth shell (login/register/pending)
+ *   "ctrl:Class@method" — panggil static method controller (POST actions, dll)
  *   "json:<name>"      — endpoint JSON
  *   "health"           — health check JSON
  * String polos (tanpa prefix) = page:<template> (default).
@@ -42,6 +43,13 @@ final class Router
         if ($handler === null) {
             http_response_code(404);
             View::render('404');
+            return;
+        }
+
+        // Aksi controller (POST form, dll)
+        if (str_starts_with($handler, 'ctrl:')) {
+            [$class, $method] = explode('@', substr($handler, 5), 2);
+            $class::$method();
             return;
         }
 

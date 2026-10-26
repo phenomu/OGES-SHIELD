@@ -1,14 +1,12 @@
 <?php
 /**
- * login.php — Bagian 4.10. Phase 1: dummy (submit → dashboard).
+ * login.php — Bagian 4.10. Phase 2: autentikasi nyata (POST → AuthController::login).
  */
 View::$pageTitle = 'Login — OGES-SHIELD';
 
-$error = null;
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // Phase 2: validasi password_hash + role check di sini.
-    $error = 'demo';
-}
+$loginError = Session::flash('login_error');
+$identifier = Session::flash('login_identifier') ?? '';
+$state      = $_GET['state'] ?? '';
 ?>
 <div class="auth-card">
   <div class="auth-logo">
@@ -20,49 +18,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <span class="al-tag">AI-AUGMENTED PENETRATION TESTING</span>
   </div>
 
-  <?php if ($error === 'demo'): ?>
-    <div class="auth-alert error" style="margin-bottom: var(--sp-4)">
-      Autentikasi belum aktif di Phase 1 (demo). Klik "Sign In" untuk masuk ke dashboard dummy.
-    </div>
-  <?php elseif (($_GET['state'] ?? '') === 'pending'): ?>
+  <?php if ($loginError): ?>
+    <div class="auth-alert error" style="margin-bottom: var(--sp-4)"><?= e($loginError) ?></div>
+  <?php elseif ($state === 'pending'): ?>
     <div class="auth-alert pending" style="margin-bottom: var(--sp-4)">
       Akun kamu masih <strong>menunggu persetujuan superadmin</strong>. Coba login lagi setelah akun di-approve.
     </div>
-  <?php elseif (($_GET['state'] ?? '') === 'rejected'): ?>
+  <?php elseif ($state === 'rejected'): ?>
     <div class="auth-alert error" style="margin-bottom: var(--sp-4)">
       Akun kamu <strong>ditolak</strong> oleh superadmin. Hubungi admin untuk keterangan lebih lanjut.
     </div>
   <?php endif; ?>
 
   <form class="auth-form" method="post" action="/login" data-login-form>
+    <input type="hidden" name="csrf" value="<?= e(Session::csrf()) ?>">
     <div class="form-field">
       <label class="form-label" for="login-identifier">EMAIL / USERNAME</label>
-      <input class="input mono" type="text" id="login-identifier" name="identifier" placeholder="operator@team.id" required>
+      <input class="input mono" type="text" id="login-identifier" name="identifier" placeholder="operator@team.id" value="<?= e($identifier) ?>" required autofocus>
     </div>
     <div class="form-field">
       <label class="form-label" for="login-password">PASSWORD</label>
-      <input class="input mono" type="password" id="login-password" name="password" placeholder="••••••••••" required minlength="8">
+      <input class="input mono" type="password" id="login-password" name="password" placeholder="••••••••••" required>
     </div>
     <button type="submit" class="btn btn-primary" style="padding: 10px">Sign In</button>
   </form>
 
   <p class="auth-foot">Belum punya akun? <a href="/register">Register</a> · Lupa password hubungi superadmin.</p>
 </div>
-
-<script>
-(function () {
-  var form = document.querySelector("[data-login-form]");
-  if (!form) return;
-  form.addEventListener("submit", function (e) {
-    e.preventDefault();
-    // Phase 1 dummy: validasi client-side minimal lalu redirect
-    var id = form.querySelector("#login-identifier").value.trim();
-    var pw = form.querySelector("#login-password").value;
-    var err = null;
-    if (!id) err = "Email/username wajib diisi.";
-    else if (pw.length < 8) err = "Password minimal 8 karakter.";
-    if (err) { alert(err); return; }
-    window.location.href = "/dashboard";
-  });
-})();
-</script>

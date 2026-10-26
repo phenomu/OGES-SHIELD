@@ -15,8 +15,9 @@ CREATE TABLE IF NOT EXISTS users (
   email         VARCHAR(190)  NOT NULL UNIQUE,
   username      VARCHAR(60)   NOT NULL UNIQUE,
   password_hash VARCHAR(255)  NOT NULL,            -- password_hash() bcrypt/argon2
-  role          ENUM('pending','user','superadmin') NOT NULL DEFAULT 'pending',
-  rejection_reason VARCHAR(500) NULL,
+  role          ENUM('pending','user','superadmin','rejected') NOT NULL DEFAULT 'pending',
+  registration_reason VARCHAR(500) NULL,           -- justifikasi akses, dilihat superadmin
+  rejection_reason VARCHAR(500) NULL,              -- alasan reject, ditampilkan saat login attempt
   created_at    TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   approved_at   TIMESTAMP NULL,
   approved_by   INT UNSIGNED NULL,

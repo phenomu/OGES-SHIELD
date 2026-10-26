@@ -9,9 +9,8 @@
 > - Target total: **10–14 hari kerja**. Estimasi hari per phase adalah PANDUAN, boleh geser asal
 >   urutan prioritas (UI/UX dulu, backend belakangan) tetap dipegang.
 
-**Status project saat ini:** 🟡 Phase 1 selesai (1A–1E tercentang; menunggu demo + approval
-user untuk Phase 2). Key AI router terisi & model id terverifikasi: `nr/glm-5.3`
-(fallback `nr/glm-5.2`) via `GET /v1/models`.
+**Status project saat ini:** 🟢 Phase 1 approved (2026-10-26) — Phase 2 (Auth & RBAC nyata)
+sedang dikerjakan.
 
 ---
 
@@ -117,25 +116,39 @@ user untuk Phase 2). Key AI router terisi & model id terverifikasi: `nr/glm-5.3`
       (stat card, donut chart, badge tabel, detail panel)
       Catatan: sumber tunggal var `--sev-*` di tokens.css; JS SEV_COLORS + class dinamis
       `sev-{level}` PHP memakai nilai sama.
-- [ ] **STOP — demo Phase 1 ke user, minta approval eksplisit sebelum lanjut Phase 2**
+- [x] **STOP — demo Phase 1 ke user, minta approval eksplisit sebelum lanjut Phase 2**
 
-> `APPROVED by user: ____________`
+> `APPROVED by user: 2026-10-26`
 
 ---
 
 ## Phase 2 — Auth & RBAC Nyata (🟣, estimasi 1 hari)
 
-- [ ] Tabel `users` final (role: pending/user/superadmin, password_hash, created_at, approved_at,
+- [x] Tabel `users` final (role: pending/user/superadmin, password_hash, created_at, approved_at,
       approved_by)
-- [ ] Register → insert role=`pending`, tampilkan `pending-approval.php`
-- [ ] Login: cek password_hash, cek role != pending (kalau pending → pesan jelas, tidak boleh masuk)
-- [ ] Session handling + CSRF token di semua form
-- [ ] Middleware/guard: halaman admin cek role superadmin server-side
-- [ ] `admin/approvals.php` fungsional: approve → role jadi `user`, reject → tandai rejected
+      Catatan: deviasi kecil — ENUM role ditambah nilai `rejected` (approvals bisa reject tanpa
+      hapus akun, alasan reject tampil saat login attempt) + kolom `registration_reason`
+      (justifikasi register, dilihat superadmin). DB dev sudah di-ALTER.
+- [x] Register → insert role=`pending`, tampilkan `pending-approval.php`
+- [x] Login: cek password_hash, cek role != pending (kalau pending → pesan jelas, tidak boleh masuk)
+- [x] Session handling + CSRF token di semua form
+      Catatan: semua POST (login/register/approve/reject/logout) cek `Session::checkCsrf()`;
+      session regenerate id saat login; akun didowngrade pasca-login → auto-logout.
+- [x] Middleware/guard: halaman admin cek role superadmin server-side
+      Catatan: guard di front controller (semua path non-publik wajib login; `/admin/*` wajib
+      superadmin → 403) + double-guard `Auth::requireSuperadmin()` di AdminController.
+- [x] `admin/approvals.php` fungsional: approve → role jadi `user`, reject → tandai rejected
       (atau hapus, sesuai keputusan tim) — dengan konfirmasi modal
-- [ ] Seed 1 akun superadmin awal (via script/migration, bukan lewat form register)
-- [ ] Test manual: register → coba login (harus gagal, pesan pending) → superadmin approve →
+      Catatan: dipilih **reject = tandai `rejected` + alasan** (bukan hapus) supaya jejak
+      approval tetap ada + audit lengkap. Approve/reject via POST + CSRF + audit_logs.
+- [x] Seed 1 akun superadmin awal (via script/migration, bukan lewat form register)
+      Catatan: `scripts/seed_admin.php` (idempotent, password bisa diberikan atau digenerate).
+      Akun dev: `admin` / password dari output script (lihat note chat, jangan commit).
+- [x] Test manual: register → coba login (harus gagal, pesan pending) → superadmin approve →
       login sukses
+      Catatan: E2E via curl + browser (login form asli) — semua jalur terverifikasi:
+      register→pending→login block→approve→login ok→403 utk user biasa di /admin→
+      logout→redirect login. Audit trail lengkap di `audit_logs`.
 
 **Definition of Done Phase 2:** alur register → pending → approve → login benar-benar jalan end to
 end, tanpa data dummy.

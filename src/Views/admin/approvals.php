@@ -1,11 +1,19 @@
 <?php
 /**
- * admin/approvals.php — 1D (dummy). Phase 2: fungsional + guard superadmin server-side.
+ * admin/approvals.php — Phase 2 fungsional: guard superadmin (server-side),
+ * approve/reject via POST + CSRF, data dari tabel users.
  */
 View::$pageTitle = 'Approvals — OGES-SHIELD';
 View::$activeNav = 'approvals';
 
-$pending = MockData::pendingUsers();
+$pending = $pending ?? User::pendingList();
+$flashOk   = Session::flash('approvals_ok');
+$flashErr  = Session::flash('approvals_error');
+$rejecting = null; // user utk modal reject (flash sekali baca)
+$rejectUserId = (int) (Session::flash('reject_user_id') ?? 0);
+if ($rejectUserId > 0) {
+    $rejecting = User::findById($rejectUserId);
+}
 ?>
 <div class="page-head">
   <div>
@@ -14,6 +22,12 @@ $pending = MockData::pendingUsers();
   </div>
   <span class="badge badge-success"><span class="dot"></span>ADMIN</span>
 </div>
+
+<?php if ($flashOk): ?>
+  <div class="auth-alert ok mb-3" style="border-radius: var(--r-md)"><?= e($flashOk) ?></div>
+<?php elseif ($flashErr): ?>
+  <div class="auth-alert error mb-3" style="border-radius: var(--r-md)"><?= e($flashErr) ?></div>
+<?php endif; ?>
 
 <section class="panel">
   <div class="panel-head">
@@ -34,68 +48,65 @@ $pending = MockData::pendingUsers();
         <thead><tr><th>Name</th><th>Email</th><th>Username</th><th>Justifikasi</th><th>Registered</th><th></th></tr></thead>
         <tbody>
           <?php foreach ($pending as $u): ?>
-            <tr data-user="<?= $u['id'] ?>">
-              <td class="cell-strong"><?= htmlspecialchars($u['name']) ?></td>
-              <td class="mono"><?= htmlspecialchars($u['email']) ?></td>
-              <td class="mono"><?= htmlspecialchars($u['username']) ?></td>
-              <td style="max-width:280px"><?= htmlspecialchars($u['reason']) ?></td>
-              <td class="mono"><?= $u['registered'] ?></td>
+            <tr data-user="<?= (int) $u['id'] ?>">
+              <td class="cell-strong"><?= e($u['name']) ?></td>
+              <td class="mono"><?= e($u['email']) ?></td>
+              <td class="mono"><?= e($u['username']) ?></td>
+              <td style="max-width:280px"><?= e($u['registration_reason'] ?? ($u['reason'] ?? '--')) ?></td>
+              <td class="mono"><?= e((string) $u['created_at']) ?></td>
               <td style="white-space:nowrap">
-                <button type="button" class="btn btn-sm btn-primary" data-approve="<?= $u['id'] ?>">Approve</button>
-                <button type="button" class="btn btn-sm btn-danger" data-reject="<?= $u['id'] ?>">Reject</button>
+                <!-- Approve: POST + CSRF, aksi langsung -->
+                <form method="post" action="/admin/approve" style="display:inline">
+                  <input type="hidden" name="csrf" value="<?= e(Session::csrf()) ?>">
+                  <input type="hidden" name="user_id" value="<?= (int) $u['id'] ?>">
+                  <button type="submit" class="btn btn-sm btn-primary">Approve</button>
+                </form>
+                <!-- Reject: buka modal konfirmasi dulu -->
+                <button type="button" class="btn btn-sm btn-danger" data-open-reject="<?= (int) $u['id'] ?>">Reject</button>
               </td>
             </tr>
           <?php endforeach; ?>
         </tbody>
       </table>
     </div>
-    <p class="form-hint mt-3">Aksi dummy Phase 1 — approve/reject nyata (DB + audit log) di Phase 2. Reject minta konfirmasi modal.</p>
   <?php endif; ?>
 </section>
 
-<!-- Modal reject (konfirmasi + alasan opsional) -->
+<!-- Modal reject (konfirmasi + alasan opsional) — submit form POST -->
 <div class="modal-backdrop" id="modal-reject">
   <div class="modal">
-    <div class="modal-head">
-      <span class="modal-title">Reject Akun</span>
-      <button type="button" class="modal-close" data-modal-close>&times;</button>
-    </div>
-    <div class="modal-body">
-      <p class="fd-value">Reject user <strong class="mono" id="rej-name">--</strong>? Akun tidak bisa login dan alasan reject (opsional) tersimpan untuk ditampilkan saat login attempt.</p>
-      <div class="form-field mt-3">
-        <label class="form-label" for="rej-reason">ALASAN REJECT (OPSIONAL)</label>
-        <textarea class="textarea" id="rej-reason" placeholder="Contoh: justifikasi akses kurang jelas, hubungi SOC lead."></textarea>
+    <form method="post" action="/admin/reject">
+      <input type="hidden" name="csrf" value="<?= e(Session::csrf()) ?>">
+      <input type="hidden" name="user_id" value="<?= $rejecting ? (int) $rejecting['id'] : 0 ?>" id="rej-user-id">
+      <div class="modal-head">
+        <span class="modal-title">Reject Akun</span>
+        <button type="button" class="modal-close" data-modal-close>&times;</button>
       </div>
-    </div>
-    <div class="modal-foot">
-      <button type="button" class="btn" data-modal-close>Cancel</button>
-      <button type="button" class="btn btn-danger" data-modal-close data-reject-confirm>Reject User</button>
-    </div>
+      <div class="modal-body">
+        <p class="fd-value">Reject user <strong class="mono" id="rej-name"><?= $rejecting ? e($rejecting['name']) : '--' ?></strong>?
+          Akun tidak bisa login; alasan reject (opsional) ditampilkan saat user mencoba login.</p>
+        <div class="form-field mt-3">
+          <label class="form-label" for="rej-reason">ALASAN REJECT (OPSIONAL)</label>
+          <textarea class="textarea" id="rej-reason" name="reason" placeholder="Contoh: justifikasi akses kurang jelas, hubungi SOC lead."></textarea>
+        </div>
+      </div>
+      <div class="modal-foot">
+        <button type="button" class="btn" data-modal-close>Cancel</button>
+        <button type="submit" class="btn btn-danger">Reject User</button>
+      </div>
+    </form>
   </div>
 </div>
 
 <script>
 (function () {
-  var rejectTarget = null;
-  document.querySelectorAll("[data-approve]").forEach(function (btn) {
+  document.querySelectorAll("[data-open-reject]").forEach(function (btn) {
     btn.addEventListener("click", function () {
       var row = btn.closest("tr");
-      row.querySelector("td:last-child").innerHTML = '<span class="sev sev-info">APPROVED ✓</span>';
-    });
-  });
-  document.querySelectorAll("[data-reject]").forEach(function (btn) {
-    btn.addEventListener("click", function () {
-      rejectTarget = btn.closest("tr");
-      var name = rejectTarget.querySelector("td").textContent;
-      document.getElementById("rej-name").textContent = name;
+      var id  = row.dataset.user;
+      document.getElementById("rej-user-id").value = id;
+      document.getElementById("rej-name").textContent = row.querySelector("td").textContent;
       document.getElementById("modal-reject").classList.add("open");
-    });
-  });
-  document.querySelectorAll("[data-reject-confirm]").forEach(function (btn) {
-    btn.addEventListener("click", function () {
-      if (rejectTarget) {
-        rejectTarget.querySelector("td:last-child").innerHTML = '<span class="sev sev-critical">REJECTED</span>';
-      }
     });
   });
 })();
