@@ -75,7 +75,12 @@ View::$activeNav = 'docs';
       <div class="ailog-entry"><span class="ailog-time">01</span>
         <div class="ailog-body"><span class="ailog-tag ai_decision">SET WORKFLOW</span>
           <p class="ailog-text">Menu <b>Automation Workflows</b> → tombol <b>Set Workflow</b>: pilih target in-scope + template. Template = urutan phase, mis. <span class="mono">full-web-app-assessment</span> (7 phase: scope validation → recon → service enum → vulnerability assessment → exploitation → cleanup → report) atau <span class="mono">external-recon-only</span> (ringan, tanpa scanning intrusif).</p>
+              <div class="ailog-entry"><span class="ailog-time">01b</span>
+        <div class="ailog-body"><span class="ailog-tag ai_decision">BUAT TEMPLATE SENDIRI</span>
+          <p class="ailog-text">Superadmin bisa bikin template custom: tombol <b>+ Buat Template</b> di Workflows. Klik kartu phase untuk menyusun alur (nomor urut + preview pipeline update live) — mis. recon + persistence simulation + report. Kartu menampilkan tool yang tersedia per phase; phase <i>tanpa tool</i> (mis. persistence) akan auto-complete saat run — supaya phase itu benar-benar jalan, tambahkan tool di menu <b>Python/Tool Modules</b> dengan <span class="mono">valid_phases: ["persistence_simulation"]</span>. Guardrail server-side: scope validation selalu pertama, report generation selalu terakhir, minimal 2 phase.</p>
         </div>
+      </div>
+</div>
       </div>
       <div class="ailog-entry"><span class="ailog-time">02</span>
         <div class="ailog-body"><span class="ailog-tag ai_decision">AI LOOP</span>

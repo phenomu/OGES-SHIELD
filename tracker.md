@@ -352,6 +352,7 @@ memalukan di depan juri, dan guardrail keamanan dasar sudah dicek manual sekali.
 | 2026-10-27 | Timeline recon = event tool per-waktu (bukan flat) + fix initTimeline labels kosong | Chart blank karena recon.php kirim data tanpa `labels`; Chart.js throw senyap |
 | 2026-10-27 | Template custom (superadmin): create + delete, phase whitelist 8, scope_validation auto-prepend, report_generation selalu terakhir | User minta bisa bikin template sendiri; guardrail urutan phase dijaga server-side; template terpakai run tidak bisa dihapus (jejak audit) |
 | 2026-10-27 | Dropdown engagement max-height 330px + scroll; tombol Pilih/Terbaru sebaris di Settings | UI feedback user: dropdown panjang ke bawah; tombol reset aneh posisinya |
+| 2026-10-27 | Modal Buat Template v2: phase picker kartu visual (deskripsi, tool per phase live dari tools.json, badge RISK, nomor urut) + preview pipeline interaktif (JS) + submit disabled <2 phase | User feedback: modal polos; juga memperjelas phase tanpa tool (persistence) auto-complete |
 | | | |
 
 ## Risiko / Blocker yang Diketahui

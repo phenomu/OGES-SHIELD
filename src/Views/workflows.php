@@ -182,9 +182,9 @@ $wfError = Session::flash('wf_error');
   </div>
 </div>
 
-<!-- Modal Buat Template (superadmin) -->
+<!-- Modal Buat Template (superadmin) — phase picker visual -->
 <div class="modal-backdrop" id="modal-new-template">
-  <div class="modal">
+  <div class="modal" style="max-width:720px">
     <div class="modal-head">
       <span class="modal-title">Buat Workflow Template</span>
       <button type="button" class="modal-x" data-modal-close>&times;</button>
@@ -192,33 +192,69 @@ $wfError = Session::flash('wf_error');
     <form method="post" action="/templates/create" id="form-new-template">
       <input type="hidden" name="csrf" value="<?= e(Session::csrf()) ?>">
       <div class="modal-body">
-        <div class="form-group">
-          <label class="form-label" for="nt-name">NAMA TEMPLATE</label>
-          <input class="input" id="nt-name" name="name" maxlength="190" required placeholder="mis. Quick SQLi Check">
-        </div>
-        <div class="form-group">
-          <label class="form-label" for="nt-slug">SLUG (identitas unik)</label>
-          <input class="input mono" id="nt-slug" name="slug" maxlength="120" required placeholder="mis. quick-sqli-check" pattern="[a-z0-9-]{3,120}" title="huruf kecil, angka, tanda minus">
+        <div class="form-row">
+          <div class="form-group" style="flex:2">
+            <label class="form-label" for="nt-name">NAMA TEMPLATE</label>
+            <input class="input" id="nt-name" name="name" maxlength="190" required placeholder="mis. Recon Ringan Custom">
+          </div>
+          <div class="form-group" style="flex:1">
+            <label class="form-label" for="nt-slug">SLUG</label>
+            <input class="input mono" id="nt-slug" name="slug" maxlength="120" required placeholder="recon-ringan" pattern="[a-z0-9-]{3,120}" title="huruf kecil, angka, minus">
+          </div>
         </div>
         <div class="form-group">
           <label class="form-label" for="nt-desc">DESKRIPSI (opsional)</label>
-          <input class="input" id="nt-desc" name="description" maxlength="300" placeholder="mis. scope + vuln scan ringan tanpa eksploitasi">
+          <input class="input" id="nt-desc" name="description" maxlength="300" placeholder="mis. scope + recon saja, ringan, tanpa eksploitasi">
         </div>
+
         <div class="form-group">
-          <label class="form-label">PHASES (urutan eksekusi; scope_validation otomatis di depan, report_generation selalu di akhir bila dipilih)</label>
-          <div class="phase-checks" style="display:grid; grid-template-columns:1fr 1fr; gap:6px 16px; margin-top:6px">
+          <label class="form-label">PHASES — klik untuk aktif/nonaktif (scope validation otomatis di depan)</label>
+          <div class="phase-picker">
             <?php
-            $allPhases = ['reconnaissance', 'service_enumeration', 'vulnerability_assessment',
-                          'exploitation_validation', 'persistence_simulation',
-                          'cleanup_verification', 'report_generation'];
-            foreach ($allPhases as $i => $ph): ?>
-              <label style="display:flex; gap:8px; align-items:center; font-size:var(--fs-xs); cursor:pointer">
-                <input type="checkbox" name="phases[]" value="<?= e($ph) ?>" id="nt-ph-<?= $i ?>">
-                <?= e(str_replace('_', ' ', $ph)) ?>
+            // info tool per phase (dari tools.json enabled)
+            $tjTools = json_decode((string) @file_get_contents(BASE_PATH . '/orchestrator/config/tools.json'), true);
+            $phaseTools = [];
+            if (is_array($tjTools) && isset($tjTools['tools'])) {
+                foreach ($tjTools['tools'] as $tt) {
+                    if (!is_array($tt) || !($tt['enabled'] ?? false)) continue;
+                    foreach ((array) ($tt['valid_phases'] ?? []) as $tp) {
+                        $phaseTools[$tp][] = (string) $tt['id'];
+                    }
+                }
+            }
+            $DASH = '—';
+            $phaseMeta = [
+                'reconnaissance'          => ['Passive discovery', 'Subdomain enumeration, DNS, WAF deteksi'],
+                'service_enumeration'     => ['Live host & service', 'Probe HTTP, tech stack, web server'],
+                'vulnerability_assessment'=> ['Vuln scanning', 'Nuclei template, indikasi SQLi'],
+                'exploitation_validation' => ['Validasi exploit', 'Payload benign, konfirmasi temuan'],
+                'persistence_simulation'  => ['Simulasi persistensi', 'Butuh tool khusus (belum ada ' . $DASH . ' tambah di Tool Modules)'],
+                'cleanup_verification'    => ['Cleanup artefak', 'Verifikasi jejak eksploitasi dibersihkan'],
+                'report_generation'       => ['Report PDF', 'Ringkasan eksekutif + findings, selalu terakhir'],
+            ];
+            $phaseIdx = 0;
+            foreach ($phaseMeta as $ph => $meta): $phaseIdx++; ?>
+              <label class="phase-card<?= in_array($ph, ['exploitation_validation', 'persistence_simulation'], true) ? ' phase-risk' : '' ?>">
+                <input type="checkbox" name="phases[]" value="<?= e($ph) ?>" id="nt-ph-<?= $phaseIdx ?>" data-phase="<?= e($ph) ?>">
+                <span class="phase-num mono" data-num>–</span>
+                <span class="phase-body">
+                  <span class="phase-name"><?= e(ucwords(str_replace('_', ' ', $ph))) ?></span>
+                  <span class="phase-desc"><?= e($meta[1]) ?></span>
+                  <span class="phase-tools mono<?= isset($phaseTools[$ph]) ? '' : ' none' ?>"><?= isset($phaseTools[$ph]) ? e(implode(', ', $phaseTools[$ph])) : 'no tools ' . $DASH . ' auto-complete' ?></span>
+                </span>
               </label>
             <?php endforeach; ?>
           </div>
-          <p class="form-hint">Minimal 2 phase. Phase tanpa tool terdaftar akan auto-complete (mis. persistence_simulation).</p>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">PREVIEW PIPELINE (urutan eksekusi)</label>
+          <div class="pipeline-preview mono" id="nt-preview">
+            <span class="pp-phase pp-fixed">01 scope validation</span>
+            <span class="pp-arrow">→</span>
+            <span class="pp-empty">pilih phase di atas…</span>
+          </div>
+          <p class="form-hint" id="nt-hint">Pilih phase di atas — scope validation selalu pertama; report generation selalu terakhir. Minimal 2 phase.</p>
         </div>
       </div>
       <div class="modal-foot">
@@ -238,11 +274,76 @@ $wfError = Session::flash('wf_error');
       if (sel) sel.value = btn.dataset.pickTemplate;
     });
   });
-  // konfirmasi aksi destruktif (hapus run)
+  // konfirmasi aksi destruktif (hapus run/template)
   document.querySelectorAll("form[data-confirm]").forEach(function (f) {
     f.addEventListener("submit", function (e) {
       if (!window.confirm(f.dataset.confirm)) e.preventDefault();
     });
   });
+
+  // ---- Phase picker interaktif: preview pipeline + nomor urut (modal buat template) ----
+  var picker = document.getElementById("modal-new-template");
+  if (picker) {
+    var boxes = Array.prototype.slice.call(picker.querySelectorAll(".phase-card"));
+    var preview = document.getElementById("nt-preview");
+    var hint = document.getElementById("nt-hint");
+    var submitBtn = picker.querySelector("button[type=submit]");
+
+    function esc(s) {
+      return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) {
+        return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c];
+      });
+    }
+
+    function render() {
+      var phases = boxes.filter(function (c) {
+        return c.querySelector("input").checked;
+      }).map(function (c) { return c.querySelector("input").value; });
+      // scope validation selalu pertama (fixed), report generation dipaksa ke akhir
+      var rest = phases.filter(function (p) { return p !== "report_generation"; });
+      var hasReport = phases.indexOf("report_generation") >= 0;
+      var seq = ["scope_validation"].concat(rest);
+      if (hasReport) seq.push("report_generation");
+
+      // nomor urut di kartu sesuai urutan eksekusi
+      boxes.forEach(function (c) {
+        var v = c.querySelector("input").value;
+        var idx = seq.indexOf(v);
+        var num = c.querySelector("[data-num]");
+        if (num) num.textContent = idx >= 0 ? String(idx + 1).padStart(2, "0") : "–";
+        c.classList.toggle("on", idx >= 0);
+      });
+
+      // preview pipeline
+      if (preview) {
+        preview.innerHTML = seq.length > 1
+          ? seq.map(function (v, i) {
+              var risk = (v === "exploitation_validation" || v === "persistence_simulation");
+              return (i ? '<span class="pp-arrow">→</span>' : "") +
+                '<span class="pp-phase' + (risk ? " pp-risk" : "") + (i === 0 ? " pp-fixed" : "") + '">' +
+                String(i + 1).padStart(2, "0") + " " + esc(v.replace(/_/g, " ")) + "</span>";
+            }).join("")
+          : '<span class="pp-empty">pilih phase di atas…</span>';
+      }
+
+      var total = seq.length;
+      if (hint) {
+        hint.textContent = total < 2
+          ? "Minimal 2 phase (termasuk scope validation) — pilih lagi."
+          : total + " phase akan dieksekusi berurutan. Scope validation selalu pertama" +
+            (hasReport ? "; report generation selalu terakhir." : ". Tanpa report generation, PDF tidak dibuat otomatis.");
+      }
+      if (submitBtn) submitBtn.disabled = total < 2;
+    }
+
+    boxes.forEach(function (c) {
+      c.addEventListener("click", function () {
+        var cb = c.querySelector("input");
+        cb.checked = !cb.checked;
+        render();
+      });
+    });
+    render();
+  }
 })();
 </script>
