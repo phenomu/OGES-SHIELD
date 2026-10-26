@@ -1,0 +1,29 @@
+{
+  "templates": [
+    {
+      "slug": "full-web-app-assessment",
+      "name": "Full Web App Assessment",
+      "description": "Alur lengkap untuk assessment web application: validasi scope, recon, enumerasi service, vulnerability assessment, validasi exploit, cleanup, dan report generation.",
+      "phases": [
+        "scope_validation",
+        "reconnaissance",
+        "service_enumeration",
+        "vulnerability_assessment",
+        "exploitation_validation",
+        "cleanup_verification",
+        "report_generation"
+      ]
+    },
+    {
+      "slug": "external-recon-only",
+      "name": "External Recon Only",
+      "description": "Recon pasif-aktif ringan tanpa scanning instrusif — hanya discovery & enumerasi. Cocok untuk first-pass atau target produksi yang sensitif.",
+      "phases": [
+        "scope_validation",
+        "reconnaissance",
+        "service_enumeration",
+        "report_generation"
+      ]
+    }
+  ]
+}
