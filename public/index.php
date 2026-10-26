@@ -51,8 +51,8 @@ $router->add('GET',  '/assets',           'assets');
 $router->add('GET',  '/recon',            'recon');
 $router->add('GET',  '/vulnerabilities',  'vulnerabilities');
 $router->add('GET',  '/workflows',        'workflows');
-$router->add('GET',  '/findings',         'findings');
-$router->add('GET',  '/reports',          'reports');
+$router->add('GET',  '/findings',         'ctrl:FindingController@show');
+$router->add('GET',  '/reports',          'ctrl:ReportController@index');
 $router->add('GET',  '/exploitation',     'exploitation');
 $router->add('GET',  '/persistence',      'persistence');
 $router->add('GET',  '/audit',            'audit');
@@ -63,6 +63,8 @@ $router->add('POST', '/runs/create',      'ctrl:RunController@create');
 $router->add('POST', '/runs/stop',        'ctrl:RunController@stop');
 $router->add('POST', '/targets/create',   'ctrl:TargetController@create');
 $router->add('POST', '/targets/scope',    'ctrl:TargetController@toggleScope');
+$router->add('GET',  '/report/download',  'ctrl:ReportController@download');
+$router->add('POST', '/reports/regenerate', 'ctrl:ReportController@regenerate');
 
 // Admin (wajib superadmin — guard di bawah + di controller)
 $router->add('GET',  '/admin/approvals',    'ctrl:AdminController@approvals');

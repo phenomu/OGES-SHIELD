@@ -19,6 +19,7 @@ import time
 from typing import Any
 
 import db
+import findings
 from ai.client import AIError, client
 from config import settings
 from tools.registry import registry
@@ -264,6 +265,13 @@ def _finish(run_id: str, status: str, error: str | None) -> None:
                "error_message=%s WHERE id=%s", (status, error, run_id))
     if status == "completed":
         write_event(run_id, "report_generation", "run_completed", {})
+        # Phase 5: overall summary + report.pdf otomatis di akhir workflow
+        try:
+            from reports.generator import generate_report
+            generate_report(run_id)
+        except Exception as e:  # report gagal → run tetap completed, bisa retry manual
+            write_event(run_id, "report_generation", "error",
+                        {"error": f"report generation: {e}"})
     elif status == "failed":
         write_event(run_id, "report_generation", "error", {"error": (error or "")[:300]})
 
@@ -413,7 +421,32 @@ def _run_phase(run_id: str, phase: str, target: dict, template_name: str) -> Non
         # --- 4. AI summary hasil tool (event ai_summary) ---
         _summarize_tool_result(run_id, phase, tool_id, result, target)
 
+        # --- 4b. map hasil → findings + AI enrich (Phase 5, Bagian 6 PROMPT.md) ---
+        _ingest_findings(run_id, phase, tool_id, result)
+
     # unreachable
+
+
+def _ingest_findings(run_id: str, phase: str, tool_id: str, result: dict) -> None:
+    """Output tool → tabel findings + AI enrichment (Phase 5). Tidak boleh
+    menggagalkan run kalau mapping/AI error — findings mentah tetap tersimpan."""
+    try:
+        ids = findings.map_tool_result(run_id, tool_id, result)
+    except Exception as e:  # mapping gagal → log, lanjut run
+        write_event(run_id, phase, "error", {"error": f"findings mapping: {e}"})
+        return
+    if not ids:
+        return
+    findings.write_findings_event(run_id, phase, tool_id, ids)
+    try:
+        n = findings.enrich_findings(run_id, ids)
+        write_event(run_id, phase, "ai_summary", {
+            "tool": "findings_enrichment",
+            "summary": f"{n}/{len(ids)} finding diperkaya AI (severity divalidasi ulang, "
+                       "summary/impact/remediation diisi)",
+        })
+    except Exception as e:
+        write_event(run_id, phase, "error", {"error": f"findings enrich: {e}"})
 
 
 def _summarize_tool_result(run_id: str, phase: str, tool_id: str,

@@ -20,11 +20,17 @@ from tools.registry import ToolRegistryError, registry
 from tools.runner import (ScopeViolation, ToolValidationError, audit,
                            run_tool, write_event)
 
-app = FastAPI(title="OGES-SHIELD Orchestrator", version="0.3.0")
+app = FastAPI(title="OGES-SHIELD Orchestrator", version="0.4.0")
 
 # worker pool sederhana: thread per run (cukup utk demo; lihat tracker)
 _workers: dict[str, threading.Thread] = {}
 _workers_lock = threading.Lock()
+
+_UUID_RE = __import__("re").compile(r"^[a-f0-9-]{36}$")
+
+
+def _is_uuid(s: str) -> bool:
+    return bool(_UUID_RE.fullmatch(s.strip().lower()))
 
 
 def _spawn_loop(run_id: str) -> None:
@@ -73,7 +79,7 @@ def health() -> dict:
     return {
         "status": "ok",
         "service": "oges-shield-orchestrator",
-        "version": "0.2.0",
+        "version": app.version,
         "db_configured": bool(settings.DB_NAME),
         "ai_configured": bool(settings.AI_ROUTER_API_KEY),
         "tools_loaded": registry.count(),
@@ -231,3 +237,25 @@ def workers() -> dict:
     with _workers_lock:
         alive = [rid for rid, t in _workers.items() if t.is_alive()]
         return {"active": len(alive), "run_ids": alive}
+
+
+class ReportBody(BaseModel):
+    run_id: str
+
+
+@app.post("/internal/generate-report")
+def generate_report(body: ReportBody) -> dict:
+    """Generate report.pdf untuk run (manual retry / regenerasi).
+    AI overall summary di-generate ulang hanya kalau belum ada di row reports."""
+    if not _is_uuid(body.run_id):
+        raise HTTPException(422, "run_id harus UUID")
+    row = db.query_one("SELECT status FROM workflow_runs WHERE id = %s", (body.run_id,))
+    if row is None:
+        raise HTTPException(404, "run tidak ditemukan")
+    from reports.generator import generate_report as gen
+    try:
+        info = gen(body.run_id)
+    except Exception as e:
+        raise HTTPException(500, f"generate gagal: {e}")
+    audit(None, "report_generated", info, run_id=body.run_id)
+    return {"ok": True, **info}

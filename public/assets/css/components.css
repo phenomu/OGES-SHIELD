@@ -617,3 +617,9 @@
   .grid-stats { grid-template-columns: repeat(3, 1fr); }
   .pipeline { grid-template-columns: repeat(2, 1fr); }
 }
+
+/* ---- Findings detail (Phase 5) ---- */
+.row-click { cursor: pointer; }
+.row-click:hover td { background: rgba(34, 211, 238, 0.05); }
+.row-active td { background: rgba(34, 211, 238, 0.10) !important; }
+.row-active td:first-child { box-shadow: inset 2px 0 0 var(--accent-cyan); }

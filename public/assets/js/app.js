@@ -126,7 +126,9 @@
     run_stopped: "warn", run_failed: "error",
     confirmation_required: "warn", confirmation_result: "info",
     security_event: "warn", error: "error",
+    finding_recorded: "ok", report_generated: "ok",
   };
+  var ACTIVE_RUN_ID = ""; // di-set initRunStream utk link download report
   function termLine(time, lv, msg) {
     var line = document.createElement("div");
     line.className = "term-line";
@@ -155,6 +157,8 @@
       case "confirmation_required": return "⚠ KONFIRMASI DIBUTUHKAN :: tool '" + (p.tool || "?") + "' destructive — " + (p.message || "tunggu konfirmasi user");
       case "confirmation_result":   return "KONFIRMASI :: user " + (p.confirmed ? "SETUJU" : "MENOLAK");
       case "security_event":return "SECURITY :: " + JSON.stringify(p).slice(0, 200);
+      case "finding_recorded": return "FINDINGS :: " + (p.message || (p.count + " finding dari " + p.tool));
+      case "report_generated": return "REPORT :: " + (p.message || ("PDF dibuat " + (p.file || ""))) + " — <a href='/report/download?id=" + ACTIVE_RUN_ID + "' style='color:var(--accent-cyan)'>download</a>";
       case "error":         return "ERROR :: " + String(p.error || "").slice(0, 200);
       default:              return e.type + " :: " + JSON.stringify(p).slice(0, 200);
     }
@@ -310,6 +314,7 @@
   function initRunStream() {
     document.querySelectorAll(".terminal[data-run-id]").forEach(function (term) {
       var runId = term.dataset.runId;
+      ACTIVE_RUN_ID = runId;
       var lastEventId = 0;
       var pollMs = 2000; // polling 2s (PROMPT.md: 1-2s cukup utk demo)
       if (document.querySelector("[data-progress-bar]")) initRunMeta(runId);

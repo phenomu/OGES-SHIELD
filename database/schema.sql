@@ -88,7 +88,7 @@ CREATE TABLE IF NOT EXISTS run_events (
                    'tool_skipped','ai_summary','ai_decision','phase_started',
                    'phase_complete','run_started','run_completed','run_stopped',
                    'run_failed','confirmation_required','confirmation_result',
-                   'security_event','error') NOT NULL,
+                   'security_event','error','finding_recorded','report_generated') NOT NULL,
   payload       JSON NULL,
   created_at    TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   CONSTRAINT fk_events_run FOREIGN KEY (run_id) REFERENCES workflow_runs(id) ON DELETE CASCADE,

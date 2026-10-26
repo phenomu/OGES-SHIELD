@@ -9,8 +9,9 @@
 > - Target total: **10–14 hari kerja**. Estimasi hari per phase adalah PANDUAN, boleh geser asal
 >   urutan prioritas (UI/UX dulu, backend belakangan) tetap dipegang.
 
-**Status project saat ini:** 🟡 Phase 4 selesai (AI orchestration loop autonomous E2E terverifikasi
-di low.my.id; menunggu approval user untuk Phase 5 — findings, overall summary & report.pdf).
+**Status project saat ini:** 🟡 Phase 5 selesai (findings + AI enrichment + overall summary +
+report.pdf WeasyPrint E2E terverifikasi — run autonomous dari Set Workflow sampai PDF
+download; menunggu approval user untuk Phase 6 — polish, hardening & demo prep).
 
 ---
 
@@ -253,24 +254,41 @@ server, hasilnya masuk DB, dan progress-nya kelihatan live di dashboard (bukan d
 bergantian → summary tiap langkah) bekerja end-to-end minimal untuk 1 phase workflow (mis.
 Reconnaissance), dengan progress granular terlihat real-time.
 
+> `APPROVED by user: 2026-10-26` ("lanjut phase 5" — lanjut eksplisit setelah review UI run page)
+
 ---
 
 ## Phase 5 — Findings, Overall Summary & report.pdf (🟣, estimasi 1.5–2 hari)
 
-- [ ] Mapping otomatis output tool (terutama nuclei) → baris `findings`
-- [ ] Panggilan AI terpisah untuk memperkaya tiap finding (`impact`, `remediation`,
+- [x] Mapping otomatis output tool (terutama nuclei) → baris `findings`
+
+      Catatan: orchestrator/findings.py — nuclei jsonlines (1 match = 1 finding, dedupe run+tool+title, evidence JSON per tool) + sqli_probe (param suspicious → finding CWE-89). Teruji: mapping SQLi → finding id=1.
+- [x] Panggilan AI terpisah untuk memperkaya tiap finding (`impact`, `remediation`,
       `summary`) & validasi ulang severity
-- [ ] `findings.php` nyambung data asli (ganti dummy Phase 1), filter & sort jalan
-- [ ] Panggilan AI "Overall Summary" di akhir workflow (agregat semua findings + rekomendasi
+
+      Catatan: enrich_findings() — 1 AI call per batch (JSON array, parser toleran code-fence). Terbukti: severity high→medium divalidasi ulang AI (guardrail Bagian 6), impact+remediation diisi AI. AI gagal → finding mentah tetap tersimpan.
+- [x] `findings.php` nyambung data asli (ganti dummy Phase 1), filter & sort jalan
+
+      Catatan: FindingController — ownership (superadmin semua, user miliknya), filter severity server-side ?sev=, sort severity order, detail panel row-click. Overall summary dari row reports. Teruji: user biasa tidak lihat data run admin (empty state).
+- [x] Panggilan AI "Overall Summary" di akhir workflow (agregat semua findings + rekomendasi
       prioritas)
-- [ ] Template `report_template.html` (atau PHP view kalau pakai dompdf/mpdf) — header
+
+      Catatan: generate_overall_summary() — dipanggil generator saat run completed; tersimpan reports.overall_summary, dipakai findings.php + report.pdf. Terbukti (teks eksekutif + rekomendasi low.my.id).
+- [x] Template `report_template.html` (atau PHP view kalau pakai dompdf/mpdf) — header
       OGES-SHIELD, info engagement, overall summary, tabel ringkasan severity, detail tiap finding
-- [ ] Generator PDF jalan dari orchestrator (atau PHP, sesuai keputusan Phase 0), simpan ke
+
+      Catatan: jinja2 + WeasyPrint — cover dark, Executive Summary, severity table, finding per-section (page-break-inside avoid), methodology & tool runs. Semua nilai di-escape manual (data tool bisa berisi HTML).
+- [x] Generator PDF jalan dari orchestrator (atau PHP, sesuai keputusan Phase 0), simpan ke
       `storage/reports/`
-- [ ] `reports.php` nyambung data asli — list report per run + tombol download yang beneran jalan
-- [ ] Test: 1 run workflow lengkap dari awal sampai `report.pdf` ke-generate & bisa di-download,
+
+      Catatan: reports/generator.py — auto saat run completed (hook _finish) + endpoint manual POST /internal/generate-report. Idempotent (upsert reports, overwrite file). jinja2 ditambah requirements.txt.
+- [x] `reports.php` nyambung data asli — list report per run + tombol download yang beneran jalan
+
+      Catatan: ReportController — list (target/template/count), download stream PDF (auth+ownership+CSRF+realpath prefix guard anti-traversal), regenerate (POST+confirm). Run page terminal kasih link download live saat event report_generated.
+- [x] Test: 1 run workflow lengkap dari awal sampai `report.pdf` ke-generate & bisa di-download,
       isinya match dengan findings yang ada di DB
 
+      Catatan: run 66260477 (low.my.id) → autonomous completed → PDF auto 25KB → inject SQLi finding → regenerate 28KB → pypdf verified 3 halaman (cover/summary/F-1/CWE-89/methodology) → download 200 application/pdf → findings.php tampil + detail. Browser: row-click, table, download 200. Ownership: user biasa 403.
 **Definition of Done Phase 5:** dari klik "Set Workflow" sampai punya `report.pdf` yang bisa
 di-download, semua otomatis, tanpa langkah manual di tengah (kecuali konfirmasi tool destructive
 kalau ada).
