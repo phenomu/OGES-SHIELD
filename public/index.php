@@ -61,6 +61,8 @@ $router->add('POST', '/logout',           'ctrl:AuthController@logout');
 $router->add('GET',  '/run',              'ctrl:RunController@show');
 $router->add('POST', '/runs/create',      'ctrl:RunController@create');
 $router->add('POST', '/runs/stop',        'ctrl:RunController@stop');
+$router->add('POST', '/targets/create',   'ctrl:TargetController@create');
+$router->add('POST', '/targets/scope',    'ctrl:TargetController@toggleScope');
 
 // Admin (wajib superadmin — guard di bawah + di controller)
 $router->add('GET',  '/admin/approvals',    'ctrl:AdminController@approvals');
