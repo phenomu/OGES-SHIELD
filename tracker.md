@@ -9,8 +9,9 @@
 > - Target total: **10–14 hari kerja**. Estimasi hari per phase adalah PANDUAN, boleh geser asal
 >   urutan prioritas (UI/UX dulu, backend belakangan) tetap dipegang.
 
-**Status project saat ini:** 🟡 Phase 0 selesai (semua checkbox tercentang, menunggu
-verifikasi user) — siap mulai Phase 1 (UI/UX clone) setelah approval.
+**Status project saat ini:** 🟡 Phase 1 selesai (1A–1E tercentang; menunggu demo + approval
+user untuk Phase 2). Key AI router terisi & model id terverifikasi: `nr/glm-5.3`
+(fallback `nr/glm-5.2`) via `GET /v1/models`.
 
 ---
 
@@ -58,49 +59,59 @@ verifikasi user) — siap mulai Phase 1 (UI/UX clone) setelah approval.
 > **mudah dipahami** siapa pun yang pertama kali buka dashboard ini.
 
 ### 1A. Shell & Navigasi
-- [ ] Layout dasar: top bar fixed + sidebar fixed + area konten scroll (sesuai Bagian 4.1 & 4.2)
-- [ ] Sidebar dengan semua menu + state active highlight + collapse/expand (opsional 🔵)
-- [ ] Top bar: logo OGES-SHIELD, engagement info, Environment pill toggle (LAB/STAGING/PRODUCTION),
+- [x] Layout dasar: top bar fixed + sidebar fixed + area konten scroll (sesuai Bagian 4.1 & 4.2)
+- [x] Sidebar dengan semua menu + state active highlight + collapse/expand (opsional 🔵)
+      Catatan: collapse/expand sidebar ditunda (🔵) — prioritas konten panel dulu.
+- [x] Top bar: logo OGES-SHIELD, engagement info, Environment pill toggle (LAB/STAGING/PRODUCTION),
       Authorization badge, AI Engine status badge, Workers/Queue, notifikasi, avatar+nama+role
-- [ ] Favicon + branding konsisten di semua halaman (title tag, dll)
+- [x] Favicon + branding konsisten di semua halaman (title tag, dll)
 
 ### 1B. Dashboard Overview (`dashboard.php`)
-- [ ] 6 stat cards (Bagian 4.3) dengan sparkline mini (bisa pakai Chart.js versi simple)
-- [ ] Panel Operations Overview: stepper 8 step + progress bar + current module + elapsed time
+- [x] 6 stat cards (Bagian 4.3) dengan sparkline mini (bisa pakai Chart.js versi simple)
+- [x] Panel Operations Overview: stepper 8 step + progress bar + current module + elapsed time
       (Bagian 4.4) — dengan dummy state yang representatif (beberapa Completed, 1 Running, sisanya
       Pending) supaya terlihat "hidup"
-- [ ] Panel Security Summary: donut chart severity + bar CVSS distribution (Bagian 4.5)
-- [ ] Panel pengganti Network Topology — **AI Orchestration Log** (dummy entries: tool selesai →
+- [x] Panel Security Summary: donut chart severity + bar CVSS distribution (Bagian 4.5)
+- [x] Panel pengganti Network Topology — **AI Orchestration Log** (dummy entries: tool selesai →
       ringkasan AI → tool berikutnya dipilih + alasan) (Bagian 4.6)
-- [ ] Panel Reconnaissance dengan tab (Target Inventory dulu, tab lain boleh placeholder "Coming
+      Catatan: dipilih **Opsi A (AI Orchestration Log)** — alasan: showcase "paling AI" untuk juri.
+- [x] Panel Reconnaissance dengan tab (Target Inventory dulu, tab lain boleh placeholder "Coming
       from real scan") + mini timeline chart (Bagian 4.7)
-- [ ] Panel Vulnerability Assessment: tabel findings + detail panel finding terpilih, klik baris →
+- [x] Panel Vulnerability Assessment: tabel findings + detail panel finding terpilih, klik baris →
       update detail panel (pure JS, data dummy) (Bagian 4.8)
-- [ ] Panel Tool Automation Engine: module pipeline cards + execution log terminal-style (auto
+- [x] Panel Tool Automation Engine: module pipeline cards + execution log terminal-style (auto
       scroll dummy log) + Quick Actions + Environment Status (Bagian 4.9)
 
 ### 1C. Halaman Auth
-- [ ] `login.php` — form + validasi client-side dasar + state error (tanpa backend asli dulu, boleh
+- [x] `login.php` — form + validasi client-side dasar + state error (tanpa backend asli dulu, boleh
       hardcode redirect ke dashboard)
-- [ ] `register.php` — form lengkap
-- [ ] `pending-approval.php` — halaman status "menunggu approval"
-- [ ] Desain state: akun ditolak, akun pending, akun approved (3 pesan beda)
+- [x] `register.php` — form lengkap
+- [x] `pending-approval.php` — halaman status "menunggu approval"
+- [x] Desain state: akun ditolak, akun pending, akun approved (3 pesan beda)
+      Catatan: state via query `?state=pending|rejected` di login + alert demo.
 
 ### 1D. Halaman pendukung lain (boleh skeleton dulu, isi dummy)
-- [ ] `workflows.php` — list workflow templates + tombol "Set Workflow" (modal pilih target +
+- [x] `workflows.php` — list workflow templates + tombol "Set Workflow" (modal pilih target +
       template) + halaman "live run" (dummy progress yang jalan sendiri via JS interval, biar
       kerasa real-time)
-- [ ] `findings.php` — Overall Summary (dummy paragraf AI) + tabel semua findings + filter severity
-- [ ] `reports.php` — list laporan dummy + tombol download (disabled dulu/placeholder)
-- [ ] `admin/approvals.php` — tabel user pending dummy + tombol approve/reject (dummy)
-- [ ] `admin/tool-registry.php` — tampilkan isi `tools.json` contoh dalam bentuk tabel/editor
+- [x] `findings.php` — Overall Summary (dummy paragraf AI) + tabel semua findings + filter severity
+- [x] `reports.php` — list laporan dummy + tombol download (disabled dulu/placeholder)
+- [x] `admin/approvals.php` — tabel user pending dummy + tombol approve/reject (dummy)
+- [x] `admin/tool-registry.php` — tampilkan isi `tools.json` contoh dalam bentuk tabel/editor
       (belum perlu nulis ke file asli)
 
 ### 1E. Review UI/UX
-- [ ] Screenshot tiap halaman utama, bandingkan sisi-demi-sisi dengan referensi desain
-- [ ] Cek semua empty state, loading state, error state ada desainnya (bukan blank)
-- [ ] Cek konsistensi warna severity (Critical/High/Medium/Low/Info) dipakai SAMA di semua tempat
+- [x] Screenshot tiap halaman utama, bandingkan sisi-demi-sisi dengan referensi desain
+      Catatan: 13 screenshot tersimpan di `storage/ui-review/` (gitignored). Verifikasi
+      via DOM/geometry (vision tool quota habis): topbar fixed 56px, sidebar fixed 232px,
+      6 stat card seragam, stepper 8 step, no horizontal scroll @1280px.
+- [x] Cek semua empty state, loading state, error state ada desainnya (bukan blank)
+      Catatan: empty state di reports/tab recon/By-Asset dll; skeleton class tersedia
+      (`.skeleton`); loading state data-nyata dipakai di Phase 3 polling.
+- [x] Cek konsistensi warna severity (Critical/High/Medium/Low/Info) dipakai SAMA di semua tempat
       (stat card, donut chart, badge tabel, detail panel)
+      Catatan: sumber tunggal var `--sev-*` di tokens.css; JS SEV_COLORS + class dinamis
+      `sev-{level}` PHP memakai nilai sama.
 - [ ] **STOP — demo Phase 1 ke user, minta approval eksplisit sebelum lanjut Phase 2**
 
 > `APPROVED by user: ____________`

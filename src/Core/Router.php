@@ -1,8 +1,12 @@
 <?php
 /**
  * Router sederhana (front-controller pattern).
- * Route = [method, path, handler]; handler = nama view template di src/Views/
- * atau "json:<endpoint>" untuk endpoint JSON.
+ * Handler format:
+ *   "page:<template>"  — render di dalam app shell (topbar+sidebar)
+ *   "auth:<template>"  — render di dalam auth shell (login/register/pending)
+ *   "json:<name>"      — endpoint JSON
+ *   "health"           — health check JSON
+ * String polos (tanpa prefix) = page:<template> (default).
  */
 
 declare(strict_types=1);
@@ -41,13 +45,24 @@ final class Router
             return;
         }
 
-        // Endpoint JSON (API internal untuk JS)
+        // Endpoint JSON (API internal untuk JS) + health
         if (str_starts_with($handler, 'json:')) {
             header('Content-Type: application/json');
             echo json_encode(['status' => 'ok', 'endpoint' => substr($handler, 5)]);
             return;
         }
+        if ($handler === 'health') {
+            header('Content-Type: application/json');
+            echo json_encode(['status' => 'ok', 'app' => 'oges-shield-php']);
+            return;
+        }
 
-        View::render($handler);
+        if (str_starts_with($handler, 'auth:')) {
+            View::auth(substr($handler, 5));
+            return;
+        }
+
+        // default / "page:" → app shell
+        View::page(str_starts_with($handler, 'page:') ? substr($handler, 5) : $handler);
     }
 }

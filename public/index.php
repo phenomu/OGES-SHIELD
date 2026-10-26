@@ -12,6 +12,15 @@ declare(strict_types=1);
 
 define('BASE_PATH', dirname(__DIR__));
 
+// php -S router mode: file statis (css/js/font/img) dilayari server langsung,
+// sisanya (termasuk path yang bentrok dengan direktori assets/admin/api) lewat router.
+if (PHP_SAPI === 'cli-server') {
+    $file = __DIR__ . (parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH) ?? '');
+    if (is_file($file)) {
+        return false;
+    }
+}
+
 require BASE_PATH . '/src/Core/Router.php';
 require BASE_PATH . '/src/Core/View.php';
 require BASE_PATH . '/src/Mock/MockData.php';
@@ -27,9 +36,9 @@ $router->add('GET', '/vulnerabilities', 'vulnerabilities');
 $router->add('GET', '/workflows', 'workflows');
 $router->add('GET', '/findings', 'findings');
 $router->add('GET', '/reports', 'reports');
-$router->add('GET', '/login', 'login');
-$router->add('GET', '/register', 'register');
-$router->add('GET', '/pending-approval', 'pending-approval');
+$router->add('GET', '/login', 'auth:login');
+$router->add('GET', '/register', 'auth:register');
+$router->add('GET', '/pending-approval', 'auth:pending-approval');
 
 // Admin (dummy Phase 1; guard superadmin server-side menyusul Phase 2)
 $router->add('GET', '/admin/approvals', 'admin/approvals');
