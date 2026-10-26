@@ -9,10 +9,12 @@
 > - Target total: **10–14 hari kerja**. Estimasi hari per phase adalah PANDUAN, boleh geser asal
 >   urutan prioritas (UI/UX dulu, backend belakangan) tetap dipegang.
 
-**Status project saat ini:** 🟡 Phase 6 berjalan (hardening security + UX polish paruh awal
-selesai: input whitelist, CSP nonce, XSS escape, dashboard/topbar data asli, notifikasi +
-dropdown fungsional, env toggle dihapus, halaman Dokumentasi, resume+delete run; sisa:
-audit log page, demo prep, E2E akun baru — jeda menunggu instruksi user lanjut).
+**Status project saat ini:** 🟡 Phase 6 berjalan (hardening security + UX polish: input
+whitelist, CSP nonce, XSS escape, dashboard/topbar data asli, notifikasi + dropdown,
+env toggle dihapus, Dokumentasi, resume+delete run, Current Engagement selector
+(session, ownership-tested), /recon /vulnerabilities /exploitation /settings data asli,
+httpx records + artefak persist; sisa: audit log page, demo prep, E2E akun baru —
+jeda menunggu instruksi user lanjut).
 
 ---
 
@@ -343,6 +345,13 @@ memalukan di depan juri, dan guardrail keamanan dasar sudah dicek manual sekali.
 
 | Tanggal | Keputusan | Alasan |
 |---|---|---|
+| 2026-10-26 | Stop run = permanen (tidak ada resume stopped-run); Resume hanya untuk `awaiting_confirmation` | Thread loop mati saat stop; melanjutkan run basi berisiko (context recon kedaluwarsa). User setuju biarkan |
+| 2026-10-27 | Current Engagement = `ActiveRun` session helper (pilihan user atau fallback run terbaru) | Topbar dulu hardwired "run terbaru" — tidak bisa diganti; selector dropdown (topbar) + form (Settings), ownership divalidasi server-side |
+| 2026-10-27 | `run_events.tool_completed` payload kini bawa `records` (max 50) + artefak `httpx_results.json` penuh | UI recon butuh data per-host (DNS/IP/service); stdout_tail 2000 char terpotong → unreliable; run lama fallback parse stdout_tail |
+| 2026-10-27 | /vulnerabilities + /recon + /exploitation + /settings: MockData/dummy → DB asli | Semua panel tampilkan data engagement aktif; ownership filter per-user |
+| 2026-10-27 | Timeline recon = event tool per-waktu (bukan flat) + fix initTimeline labels kosong | Chart blank karena recon.php kirim data tanpa `labels`; Chart.js throw senyap |
+| 2026-10-27 | Template custom (superadmin): create + delete, phase whitelist 8, scope_validation auto-prepend, report_generation selalu terakhir | User minta bisa bikin template sendiri; guardrail urutan phase dijaga server-side; template terpakai run tidak bisa dihapus (jejak audit) |
+| 2026-10-27 | Dropdown engagement max-height 330px + scroll; tombol Pilih/Terbaru sebaris di Settings | UI feedback user: dropdown panjang ke bawah; tombol reset aneh posisinya |
 | | | |
 
 ## Risiko / Blocker yang Diketahui

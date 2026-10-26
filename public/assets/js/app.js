@@ -451,17 +451,20 @@
   function initTimeline() {
     document.querySelectorAll("[data-timeline]").forEach(function (el) {
       var d = JSON.parse(el.dataset.timeline);
+      var labels = d.labels && d.labels.length ? d.labels : d.passive.map(function (_, i) { return "T" + (i + 1); });
+      var passive = d.passive || [];
+      var active = d.active || [];
       new Chart(el, {
         type: "line",
         data: {
-          labels: d.labels,
+          labels: labels,
           datasets: [
             {
-              label: "Passive", data: d.passive, borderColor: "#64748B",
+              label: "Passive", data: passive, borderColor: "#64748B",
               borderWidth: 1.5, pointRadius: 2, tension: 0.35,
             },
             {
-              label: "Active", data: d.active, borderColor: "#22D3EE",
+              label: "Active", data: active, borderColor: "#22D3EE",
               borderWidth: 1.5, pointRadius: 2, tension: 0.35,
               backgroundColor: "rgba(34,211,238,0.10)", fill: true,
             },

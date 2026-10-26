@@ -49,7 +49,12 @@ $wfError = Session::flash('wf_error');
     <h1 class="page-title">Automation Workflows</h1>
     <p class="page-sub">Set workflow → orchestrator menjalankan tools lintas phase (AI loop menyusul Phase 4)</p>
   </div>
-  <button type="button" class="btn btn-primary" data-modal-open="modal-set-workflow">+ Set Workflow</button>
+  <div style="display:flex; gap: var(--sp-2)">
+    <?php if ($user['role'] === 'superadmin'): ?>
+      <button type="button" class="btn" data-modal-open="modal-new-template">+ Buat Template</button>
+    <?php endif; ?>
+    <button type="button" class="btn btn-primary" data-modal-open="modal-set-workflow">+ Set Workflow</button>
+  </div>
 </div>
 
 <?php if ($wfError): ?>
@@ -74,8 +79,17 @@ $wfError = Session::flash('wf_error');
                 <span class="cell-strong"><?= e($t['name']) ?></span>
                 <div class="text-muted" style="font-size: var(--fs-xxs)"><?= e((string) $t['description']) ?></div>
               </td>
-              <td class="mono"><?= $t['phase_count'] ?></td>
-              <td><button type="button" class="btn btn-sm" data-modal-open="modal-set-workflow" data-pick-template="<?= e($t['slug']) ?>">Use</button></td>
+              <td class="mono" style="font-size:10px; max-width:320px"><?= e(implode(' → ', array_map(fn($ph) => str_replace('_', ' ', $ph), $t['phase_list']))) ?></td>
+              <td style="white-space:nowrap">
+                <button type="button" class="btn btn-sm" data-modal-open="modal-set-workflow" data-pick-template="<?= e($t['slug']) ?>">Use</button>
+                <?php if ($user['role'] === 'superadmin' && !in_array($t['slug'], ['full-web-app-assessment', 'external-recon-only'], true)): ?>
+                  <form method="post" action="/templates/delete" style="display:inline" data-confirm="Hapus template <?= e($t['slug']) ?>? (hanya bisa kalau belum dipakai run)">
+                    <input type="hidden" name="csrf" value="<?= e(Session::csrf()) ?>">
+                    <input type="hidden" name="slug" value="<?= e($t['slug']) ?>">
+                    <button type="submit" class="btn btn-sm btn-danger">Hapus</button>
+                  </form>
+                <?php endif; ?>
+              </td>
             </tr>
           <?php endforeach; ?>
           <?php if (!$templates): ?>
@@ -165,6 +179,53 @@ $wfError = Session::flash('wf_error');
       <button type="button" class="btn" data-modal-close>Cancel</button>
       <button type="submit" form="form-set-workflow" class="btn btn-primary">Start Run</button>
     </div>
+  </div>
+</div>
+
+<!-- Modal Buat Template (superadmin) -->
+<div class="modal-backdrop" id="modal-new-template">
+  <div class="modal">
+    <div class="modal-head">
+      <span class="modal-title">Buat Workflow Template</span>
+      <button type="button" class="modal-x" data-modal-close>&times;</button>
+    </div>
+    <form method="post" action="/templates/create" id="form-new-template">
+      <input type="hidden" name="csrf" value="<?= e(Session::csrf()) ?>">
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label" for="nt-name">NAMA TEMPLATE</label>
+          <input class="input" id="nt-name" name="name" maxlength="190" required placeholder="mis. Quick SQLi Check">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="nt-slug">SLUG (identitas unik)</label>
+          <input class="input mono" id="nt-slug" name="slug" maxlength="120" required placeholder="mis. quick-sqli-check" pattern="[a-z0-9-]{3,120}" title="huruf kecil, angka, tanda minus">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="nt-desc">DESKRIPSI (opsional)</label>
+          <input class="input" id="nt-desc" name="description" maxlength="300" placeholder="mis. scope + vuln scan ringan tanpa eksploitasi">
+        </div>
+        <div class="form-group">
+          <label class="form-label">PHASES (urutan eksekusi; scope_validation otomatis di depan, report_generation selalu di akhir bila dipilih)</label>
+          <div class="phase-checks" style="display:grid; grid-template-columns:1fr 1fr; gap:6px 16px; margin-top:6px">
+            <?php
+            $allPhases = ['reconnaissance', 'service_enumeration', 'vulnerability_assessment',
+                          'exploitation_validation', 'persistence_simulation',
+                          'cleanup_verification', 'report_generation'];
+            foreach ($allPhases as $i => $ph): ?>
+              <label style="display:flex; gap:8px; align-items:center; font-size:var(--fs-xs); cursor:pointer">
+                <input type="checkbox" name="phases[]" value="<?= e($ph) ?>" id="nt-ph-<?= $i ?>">
+                <?= e(str_replace('_', ' ', $ph)) ?>
+              </label>
+            <?php endforeach; ?>
+          </div>
+          <p class="form-hint">Minimal 2 phase. Phase tanpa tool terdaftar akan auto-complete (mis. persistence_simulation).</p>
+        </div>
+      </div>
+      <div class="modal-foot">
+        <button type="button" class="btn" data-modal-close>Cancel</button>
+        <button type="submit" class="btn btn-primary" form="form-new-template">Simpan Template</button>
+      </div>
+    </form>
   </div>
 </div>
 

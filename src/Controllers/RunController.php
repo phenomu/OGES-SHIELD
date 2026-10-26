@@ -191,6 +191,40 @@ final class RunController
         redirect('/workflows');
     }
 
+    /** POST /engagement/select — ganti run aktif (current engagement) milik user. */
+    public static function selectEngagement(): void
+    {
+        Auth::requireLogin();
+        $user = Auth::user();
+        $runId = (string) ($_POST['run_id'] ?? '');
+        if (!Session::checkCsrf((string) ($_POST['csrf'] ?? ''))) {
+            Session::flash('run_error', 'Sesi kedaluwarsa — coba lagi.');
+            redirect('/settings');
+        }
+        if (!preg_match('/^[a-f0-9-]{36}$/', $runId) || !ActiveRun::select($user, $runId)) {
+            Session::flash('run_error', 'Run tidak ditemukan / bukan milik kamu.');
+            redirect('/settings');
+        }
+        Audit::log((int) $user['id'], 'engagement_selected', ['run_id' => $runId]);
+        Session::flash('wf_success', 'Current engagement → RUN-' . substr($runId, 0, 8) . '…');
+        redirect('/settings');
+    }
+
+    /** POST /engagement/reset — kembali ke run terbaru (default). */
+    public static function resetEngagement(): void
+    {
+        Auth::requireLogin();
+        $user = Auth::user();
+        if (!Session::checkCsrf((string) ($_POST['csrf'] ?? ''))) {
+            Session::flash('run_error', 'Sesi kedaluwarsa — coba lagi.');
+            redirect('/settings');
+        }
+        ActiveRun::reset();
+        Audit::log((int) $user['id'], 'engagement_reset', []);
+        Session::flash('wf_success', 'Current engagement kembali ke run terbaru.');
+        redirect('/settings');
+    }
+
     /** HTTP POST ke orchestrator (internal). @return array|null decoded JSON. */
     private static function orchestratorPost(string $path, string $jsonBody): ?array
     {

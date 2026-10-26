@@ -139,21 +139,30 @@ def _extract_tool_call(message: dict) -> tuple[str, dict] | None:
 
 def _persist_artifacts(run_id: str, tool_id: str, result: dict) -> str | None:
     """Simpan output tool jadi file artefak yang bisa dipakai tool berikutnya.
-    subfinder → daftar host (dipakai httpx -l). Return path atau None."""
-    if tool_id != "subfinder":
-        return None
-    hosts: list[str] = []
-    for r in result.get("records") or []:
-        h = r.get("host") or r.get("input") or ""
-        if h:
-            hosts.append(str(h).strip())
-    if not hosts:
-        return None
+    subfinder → daftar host (dipakai httpx -l); httpx → json penuh (dipakai UI recon).
+    Return path atau None."""
     out_dir = settings.EVIDENCE_DIR / run_id
-    out_dir.mkdir(parents=True, exist_ok=True)
-    path = out_dir / "subfinder_hosts.txt"
-    path.write_text("\n".join(sorted(set(hosts))) + "\n", encoding="utf-8")
-    return str(path)
+    records = result.get("records") or []
+    if tool_id == "subfinder":
+        hosts: list[str] = []
+        for r in records:
+            h = r.get("host") or r.get("input") or ""
+            if h:
+                hosts.append(str(h).strip())
+        if not hosts:
+            return None
+        out_dir.mkdir(parents=True, exist_ok=True)
+        path = out_dir / "subfinder_hosts.txt"
+        path.write_text("\n".join(sorted(set(hosts))) + "\n", encoding="utf-8")
+        return str(path)
+    if tool_id == "httpx":
+        if not records:
+            return None
+        out_dir.mkdir(parents=True, exist_ok=True)
+        path = out_dir / "httpx_results.json"
+        path.write_text(json.dumps(records, ensure_ascii=False, indent=1), encoding="utf-8")
+        return str(path)
+    return None
 
 
 def _artifacts_hint(run_id: str) -> str:

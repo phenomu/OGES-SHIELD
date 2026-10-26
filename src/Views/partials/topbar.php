@@ -6,12 +6,9 @@
 $user = Auth::user();
 $isSuper = ($user['role'] ?? '') === 'superadmin';
 
-// run terbaru milik user (engagement) — posisi param, superadmin lihat semua
-$latestRun = Database::run(
-    'SELECT id, status, current_phase FROM workflow_runs
-     WHERE (? = 1 OR created_by = ?) ORDER BY created_at DESC LIMIT 1',
-    [$isSuper ? 1 : 0, (int) $user['id']]
-)->fetch();
+// current engagement: pilihan user (session) atau run terbaru — dropdown selector
+$latestRun = ActiveRun::current($user);
+$runOptions = ActiveRun::list($user, 12);
 
 // workers aktif + queue — live dari DB
 $workers = Database::run(
@@ -62,10 +59,35 @@ $notifCount = count($notifItems);
     </span>
   </div>
 
-  <div class="topbar-block engagement">
-    <span class="tb-label">CURRENT ENGAGEMENT</span>
-    <span class="tb-value mono"><?= e($latestRun ? 'RUN-' . substr((string) $latestRun['id'], 0, 8) : '—') ?></span>
-    <span class="tb-sub mono"><?= e($latestRun ? strtoupper((string) $latestRun['status']) : 'no active engagement') ?></span>
+  <div class="topbar-block engagement-wrap">
+    <button type="button" class="engagement-chip" data-dropdown="engagement-menu" aria-haspopup="true" aria-expanded="false" title="Ganti current engagement">
+      <span class="tb-label">CURRENT ENGAGEMENT</span>
+      <span class="tb-value mono"><?= e($latestRun ? 'RUN-' . substr((string) $latestRun['id'], 0, 8) : '—') ?></span>
+      <span class="tb-sub mono"><?= e($latestRun ? strtoupper((string) $latestRun['status']) . ' · ' . mbTrunc((string) $latestRun['target_value'], 22) : 'no active engagement') ?></span>
+      <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+    </button>
+    <div class="dropdown-menu" id="engagement-menu" role="menu" aria-label="Pilih engagement" hidden>
+      <div class="dropdown-head">GANTI ENGAGEMENT</div>
+      <?php if (!$runOptions): ?>
+        <div class="dropdown-empty">Belum ada run — buat via Workflows.</div>
+      <?php else: ?>
+        <?php foreach ($runOptions as $ro): $roActive = $latestRun && $ro['id'] === $latestRun['id']; ?>
+          <form method="post" action="/engagement/select">
+            <input type="hidden" name="csrf" value="<?= e(Session::csrf()) ?>">
+            <input type="hidden" name="run_id" value="<?= e($ro['id']) ?>">
+            <button type="submit" class="dropdown-item<?= $roActive ? ' active' : '' ?>" role="menuitem">
+              <span class="dropdown-msg mono">RUN-<?= e(substr((string) $ro['id'], 0, 8)) ?><?= $roActive ? ' ✓' : '' ?></span>
+              <span class="dropdown-sub"><?= e(mbTrunc((string) $ro['target_value'], 30)) ?> · <?= e(strtoupper((string) $ro['status'])) ?></span>
+            </button>
+          </form>
+        <?php endforeach; ?>
+        <div class="dropdown-sep"></div>
+        <form method="post" action="/engagement/reset">
+          <input type="hidden" name="csrf" value="<?= e(Session::csrf()) ?>">
+          <button type="submit" class="dropdown-item" role="menuitem">⟲ Kembali ke run terbaru</button>
+        </form>
+      <?php endif; ?>
+    </div>
   </div>
 
   <div class="topbar-block authz">

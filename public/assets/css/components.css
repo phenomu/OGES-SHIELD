@@ -644,3 +644,20 @@
 .dropdown-empty { padding: var(--sp-3); font-size: var(--fs-xs); color: var(--text-faint); }
 .dropdown-sep { height: 1px; background: var(--border-subtle); margin: var(--sp-1) 0; }
 .dropdown-danger { color: var(--sev-critical); }
+
+/* Engagement selector (topbar) — Phase 6 */
+.engagement-wrap { position: relative; }
+.engagement-chip {
+  background: none; border: 1px solid transparent; cursor: pointer; display: flex;
+  align-items: center; gap: 6px; padding: 4px 10px; border-radius: var(--r-md);
+  color: var(--text-primary); font: inherit; text-align: left;
+}
+.engagement-chip:hover { background: rgba(34, 211, 238, 0.06); border-color: var(--border-subtle); }
+.engagement-chip[aria-expanded="true"] { background: rgba(34, 211, 238, 0.10); border-color: rgba(34, 211, 238, 0.35); }
+.engagement-chip svg { color: var(--text-faint); flex: none; }
+.engagement-chip .tb-value { color: var(--accent-cyan); }
+.dropdown-item.active { background: rgba(34, 211, 238, 0.10); box-shadow: inset 2px 0 0 var(--accent-cyan); }
+#engagement-menu { right: auto; left: 0; min-width: 300px; max-height: 330px; overflow-y: auto; }
+.hidden-form { display: none; }
+#engagement-menu::-webkit-scrollbar { width: 6px; }
+#engagement-menu::-webkit-scrollbar-thumb { background: var(--border-subtle); border-radius: 3px; }

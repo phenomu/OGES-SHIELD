@@ -5,8 +5,38 @@
 View::$pageTitle = 'Vulnerability Assessment — OGES-SHIELD';
 View::$activeNav = 'vulns';
 
-$findings = MockData::findings();
-$first = $findings[0];
+// data asli: findings milik user (Phase 6 — ganti MockData)
+$user = Auth::user();
+$isSuper = ($user['role'] ?? '') === 'superadmin';
+$ownFilter = $isSuper ? '1=1' : 'wr.created_by = ' . (int) $user['id'];
+$rows = Database::run(
+    "SELECT f.id, f.severity, f.title, f.cvss_score, f.cwe, f.cve, f.summary,
+            f.impact, f.remediation, f.evidence_path, f.source_tool, f.verification_status,
+            f.`references` AS refs_json, t.value AS asset
+     FROM findings f JOIN workflow_runs wr ON wr.id = f.run_id
+     LEFT JOIN targets t ON t.id = f.asset_id
+     WHERE $ownFilter
+     ORDER BY FIELD(f.severity,'critical','high','medium','low','info'), f.id DESC LIMIT 100"
+)->fetchAll(PDO::FETCH_ASSOC);
+$findings = array_map(function ($f) {
+    $refs = json_decode((string) ($f['refs_json'] ?? ''), true);
+    return [
+        'id' => (int) $f['id'], 'severity' => (string) $f['severity'],
+        'title' => (string) $f['title'],
+        'cvss' => $f['cvss_score'] !== null ? (float) $f['cvss_score'] : null,
+        'cwe' => $f['cwe'], 'cve' => $f['cve'], 'summary' => $f['summary'],
+        'impact' => $f['impact'], 'remediation' => $f['remediation'],
+        'evidence' => $f['evidence_path'], 'asset' => $f['asset'] ?? '—',
+        'tool' => $f['source_tool'], 'refs' => is_array($refs) ? $refs : [],
+        'status' => (string) $f['verification_status'],
+    ];
+}, $rows);
+$first = $findings[0] ?? [
+    'id' => 0, 'severity' => 'info', 'title' => 'Belum ada findings', 'cvss' => null,
+    'cwe' => null, 'cve' => null, 'summary' => 'Jalankan workflow untuk mengumpulkan temuan.',
+    'impact' => '—', 'remediation' => '—', 'evidence' => null, 'asset' => '—',
+    'tool' => '—', 'refs' => [], 'status' => 'unverified',
+];
 $sevCounts = [];
 foreach (['critical', 'high', 'medium', 'low', 'info'] as $sev) {
     $sevCounts[$sev] = count(array_filter($findings, fn($f) => $f['severity'] === $sev));
@@ -15,7 +45,7 @@ foreach (['critical', 'high', 'medium', 'low', 'info'] as $sev) {
 <div class="page-head">
   <div>
     <h1 class="page-title">Vulnerability Assessment</h1>
-    <p class="page-sub">Temuan aktif + detail per finding — data dummy Phase 1</p>
+    <p class="page-sub">Temuan aktif + detail per finding — data asli, semua run milikmu</p>
   </div>
 </div>
 
@@ -72,16 +102,16 @@ foreach (['critical', 'high', 'medium', 'low', 'info'] as $sev) {
       <div class="fd-fields">
         <div class="fd-field"><span class="fd-label">ASSET</span><span class="fd-value mono" id="fd-asset"><?= htmlspecialchars($first['asset']) ?></span></div>
         <div class="fd-field"><span class="fd-label">CWE / CVE</span><span class="fd-value mono" id="fd-cwe"><?= htmlspecialchars(($first['cwe'] ?? '--') . ' / ' . ($first['cve'] ?? '--')) ?></span></div>
-        <div class="fd-field"><span class="fd-label">SUMMARY</span><span class="fd-value" id="fd-summary"><?= htmlspecialchars($first['summary']) ?></span></div>
+        <div class="fd-field"><span class="fd-label">SUMMARY</span><span class="fd-value" id="fd-summary"><?= htmlspecialchars($first['summary'] ?? '—') ?></span></div>
         <div class="fd-field"><span class="fd-label">EVIDENCE</span><span class="fd-value mono" id="fd-evidence"><?= htmlspecialchars($first['evidence'] ?? '--') ?></span></div>
-        <div class="fd-field"><span class="fd-label">IMPACT</span><span class="fd-value" id="fd-impact"><?= htmlspecialchars($first['impact']) ?></span></div>
-        <div class="fd-field"><span class="fd-label">REMEDIATION</span><span class="fd-value" id="fd-remediation"><?= htmlspecialchars($first['remediation']) ?></span></div>
+        <div class="fd-field"><span class="fd-label">IMPACT</span><span class="fd-value" id="fd-impact"><?= htmlspecialchars($first['impact'] ?? '—') ?></span></div>
+        <div class="fd-field"><span class="fd-label">REMEDIATION</span><span class="fd-value" id="fd-remediation"><?= htmlspecialchars($first['remediation'] ?? '—') ?></span></div>
         <div class="fd-field"><span class="fd-label">REFERENCES</span><span class="fd-value" id="fd-refs">
           <?php if (!empty($first['refs'])): $refTotal = count($first['refs']); foreach (array_values($first['refs']) as $refIdx => $ref): ?>
             <a href="<?= htmlspecialchars($ref) ?>" target="_blank" rel="noopener"><?= htmlspecialchars(parse_url($ref, PHP_URL_HOST) ?: $ref) ?></a><?= $refIdx < $refTotal - 1 ? ' · ' : '' ?>
           <?php endforeach; else: ?>--<?php endif; ?>
         </span></div>
-        <div class="fd-field"><span class="fd-label">VERIFICATION</span><span class="fd-value" id="fd-verification">UNVERIFIED · source <?= htmlspecialchars($first['tool']) ?></span></div>
+        <div class="fd-field"><span class="fd-label">VERIFICATION</span><span class="fd-value" id="fd-verification"><?= strtoupper(str_replace(' ', '_', $first['status'])) ?> · source <?= htmlspecialchars($first['tool']) ?></span></div>
       </div>
     </div>
   </section>
@@ -100,7 +130,7 @@ window.FINDINGS = <?= json_encode($findings) ?>;
       set("fd-id", "#" + f.id);
       set("fd-title", f.title);
       set("fd-sev", f.severity.toUpperCase());
-      set("fd-cvss", Number(f.cvss).toFixed(1));
+      set("fd-cvss", f.cvss != null ? Number(f.cvss).toFixed(1) : "--");
       set("fd-asset", f.asset);
       set("fd-cwe", (f.cwe || "--") + " / " + (f.cve || "--"));
       set("fd-summary", f.summary);
@@ -109,7 +139,7 @@ window.FINDINGS = <?= json_encode($findings) ?>;
       set("fd-remediation", f.remediation);
       var refs = document.getElementById("fd-refs");
       if (refs) refs.textContent = f.refs && f.refs.length ? f.refs.join(" · ") : "--";
-      set("fd-verification", "UNVERIFIED · source " + f.tool);
+      set("fd-verification", String(f.status || "UNVERIFIED").toUpperCase() + " · source " + f.tool);
       ["fd-sev", "fd-cvss"].forEach(function (id) {
         var el = document.getElementById(id);
         if (el) el.className = el.className.replace(/sev-\w+/, "sev-" + f.severity);

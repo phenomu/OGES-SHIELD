@@ -295,6 +295,7 @@ def run_tool(run_id: str, tool_id: str, params: dict, user_id: int | None = None
 
     write_event(run_id, phase, "tool_completed" if result["ok"] else "tool_failed", {
         "tool": tool_id, "returncode": proc.returncode,
+        "records": records if len(records) <= 50 else None,  # payload ringkas: max 50 rec
         "record_count": len(records),
         "elapsed_ms": elapsed_ms,
         "stdout_tail": result["stdout_tail"],
