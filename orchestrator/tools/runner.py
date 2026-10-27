@@ -261,6 +261,7 @@ _CUSTOM_TOOLS: dict[str, str] = {
     "custom_php_check": "php_check.py",
     "custom_php2shell": "php2shell.py",
     "custom_cms_check": "cms_check.py",
+    "custom_template": "template.py",  # scaffold referensi — jalan kalau di-enable
 }
 
 
