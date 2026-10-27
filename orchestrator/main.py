@@ -105,6 +105,10 @@ def health() -> dict:
         "db_configured": bool(settings.DB_NAME),
         "ai_configured": bool(settings.AI_ROUTER_API_KEY),
         "tools_loaded": registry.count(),
+        # nama model dari .env orchestrator — dipakai UI supaya tidak hardcoded.
+        # API key TIDAK pernah ikut di sini.
+        "model": settings.AI_MODEL_PRIMARY,
+        "model_fallback": settings.AI_MODEL_FALLBACK,
     }
 
 

@@ -36,7 +36,7 @@ $allCount = $allCount ?? count($findings);
         <h2 class="panel-title">Overall Summary</h2>
         <p class="panel-subtitle">Ringkasan eksekutif — 1 panggilan AI di akhir workflow</p>
       </div>
-      <span class="badge badge-cyan"><span class="dot"></span>glm-5.3</span>
+      <span class="badge badge-cyan"><span class="dot"></span><?= e(AiEngine::model()) ?></span>
     </div>
     <?php if ($report && trim((string) ($report['overall_summary'] ?? '')) !== ''): ?>
       <?php foreach (preg_split('/\n\n/', (string) $report['overall_summary']) as $para): if (trim($para) === '') continue; ?>

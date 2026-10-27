@@ -44,6 +44,9 @@ foreach ($notifRows as $nrow) {
     ];
 }
 $notifCount = count($notifItems);
+
+// status engine AI — model dibaca dari .env orchestrator, tidak hardcoded
+$aiEngine = AiEngine::status();
 ?>
 <header class="topbar">
   <button class="sidebar-toggle" type="button" aria-label="Buka menu navigasi" aria-expanded="false" aria-controls="app-sidebar">
@@ -105,8 +108,8 @@ $notifCount = count($notifItems);
   <div class="topbar-block ai-engine">
     <span class="tb-label">AI ENGINE</span>
     <span class="tb-value">
-      <span class="badge badge-cyan"><span class="dot"></span>ONLINE</span>
-      <span class="tb-sub mono">glm-5.3</span>
+      <span class="badge <?= $aiEngine['online'] ? 'badge-cyan' : 'badge-danger' ?>"><span class="dot"></span><?= $aiEngine['online'] ? 'ONLINE' : 'OFFLINE' ?></span>
+      <span class="tb-sub mono" title="AI_MODEL_PRIMARY dari orchestrator/.env"><?= e($aiEngine['model']) ?></span>
     </span>
   </div>
 

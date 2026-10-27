@@ -136,12 +136,17 @@
   /* ---------- Live log feeds ----------
      Phase 3: kalau ada terminal dengan data-run-id → polling /api/stream.php
      (event asli dari orchestrator). Terminal tanpa data-run-id tetap dummy. */
+  // Nama model di log dummy diambil dari atribut data-ai-model di <body>
+  // (diisi server dari orchestrator/.env) — jangan hardcode di sini.
+  var AI_MODEL_LABEL =
+    document.body.getAttribute("data-ai-model") || "ai-engine";
+
   var LOG_SOURCES = [
     ["INFO",  "orchestrator.loop",    "phase=vulnerability_assessment iter=6 tool_pool=3"],
     ["INFO",  "nuclei_runner",        "template=default/cves/2021/CVE-2021-23017.yaml status=matched host=www.acme-corp.com"],
     ["WARN",  "nuclei_runner",        "template=exposed-backup-file slow_response=8.4s"],
     ["INFO",  "httpx_runner",         "probe 203.0.113.25:22 banner=SSH-2.0-OpenSSH_8.9"],
-    ["INFO",  "ai.client",            "chat glm-5.3 tokens_in=1832 tokens_out=141 tool_call=mark_phase_complete?no"],
+    ["INFO",  "ai.client",            "chat " + AI_MODEL_LABEL + " tokens_in=1832 tokens_out=141 tool_call=mark_phase_complete?no"],
     ["INFO",  "subfinder_runner",     "source=hackertarget new_sub=dev.acme-corp.com"],
     ["ERROR", "sqli_probe",           "target param not found: POST /login password=*** (masked)"],
     ["INFO",  "orchestrator.loop",    "tool_selected=nuclei args_severity=high,critical"],
