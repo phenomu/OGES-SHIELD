@@ -9,7 +9,14 @@
 > - Target total: **10–14 hari kerja**. Estimasi hari per phase adalah PANDUAN, boleh geser asal
 >   urutan prioritas (UI/UX dulu, backend belakangan) tetap dipegang.
 
-**Status project saat ini:** 🟢 Phase 6 paruh akhir — SPA nav + fix run page live +
+**Status project saat ini:** 🟢 Phase 6 SELESAI (must-have + nice-to-have semua).
+Rencana berikutnya (belum dikerjakan — antre setelah chat compress):
+(1) sparkline stat-card dashboard → data deret riil (findings/run per hari,
+12 titik, GROUP BY DATE), (2) timeline chart Operations Overview → port pola
+recon.php (event asli per tool), (3) persistence simulation — user kerjakan
+sendiri nanti. Selesai itu tinggal dress rehearsal DEMO.md.
+
+Sejarah: SPA nav + fix run page live +
 exploit chain + CMS checker multi-host adaptif (cms_check + nuclei template_tags).
 Terbukti: run 29c66af2 (low.my.id, 8 subdomain) — cms_check 1× semua host, AI
 panggil nuclei per host dengan template_tags SESUAI CMS (hunters.low.my.id
@@ -373,6 +380,17 @@ kalau ada).
       city skyline SVG bawah halaman auth (login+register, mask gradient),
       strip katakana ネットワーク・シールド di sidebar footer. Semua statis
       ringan, tidak animasi (hindari beban demo).
+### Antrean kerja berikutnya (belum dikerjakan)
+
+- [ ] 🔵 Sparkline stat-card dashboard → deret riil: findings + run per hari
+      12 titik terakhir (SQL GROUP BY DATE(created_at/finished_at)), ganti
+      array_fill flat. Cosmetik kecil — juri kemungkinan tidak sadar.
+- [ ] 🔵 Timeline chart Operations Overview (dashboard) → port pola recon.php:
+      event tool asli run terbaru (labels HH:MM tool, passive = kumulatif
+      subdomain subfinder, active = kumulatif host live httpx). Sekarang flat 0.
+- [ ] ⚪ Persistence Simulation — user kerjakan sendiri (tool custom via
+      tools/template.py + valid_phases persistence_simulation + template)
+
 - [ ] ⚪ Email notification approval (cut kalau waktu tidak cukup)
 - [ ] ⚪ Multi-bahasa UI (cut, hackathon cukup 1 bahasa)
 
