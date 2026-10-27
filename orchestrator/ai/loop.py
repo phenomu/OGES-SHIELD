@@ -98,6 +98,11 @@ def _system_prompt(phase: str, target: dict, template_name: str, run_id: str) ->
         "Parameter domain/target_url WAJIB bernilai target itu atau subdomain/path dari target itu. "
         "Parameter lain dari target = DITOLAK scope guard server-side (lihat SCOPE VIOLATION di hasil). "
         "Kalau tool terakhir ditolak scope, JANGAN ulangi parameter sama — koreksi atau pilih tool lain.\n"
+        "- COVERAGE WAJIB: setiap host live hasil recon (daftar di 'Host live hasil recon') "
+        "HARUS di-scan minimal satu tool vuln/exploit (nuclei dll) sebelum mark_phase_complete. "
+        "Setelah satu host selesai, pindah ke host berikutnya yang masih 'BELUM di-scan' — "
+        "JANGAN bolak-balik scan host yang sama tanpa alasan baru. "
+        "Host CMS-nya sudah terdeteksi: pilih template_tags sesuai CMS host itu.\n"
         "- Jangan ulangi tool yang sudah memberikan hasil bila tidak ada alasan (mis. input baru).\n"
         "- Kalau informasi phase ini sudah cukup → panggil mark_phase_complete.\n"
         "- Kalau tool gagal, pertimbangkan tool lain atau mark_phase_complete dengan alasan.\n"
@@ -133,7 +138,90 @@ def _running_summary(run_id: str) -> str:
         else:
             s = str(p.get("summary", ""))[:150]
             lines.append(f"- [{r['phase']}] AI: {s}")
-    return "\n".join(reversed(lines))
+    summary = "\n".join(reversed(lines))
+
+    # --- coverage tracker: host live dari artefak + tool mana per host yang sudah jalan.
+    # Tanpa ini AI tidak tahu host mana yang BELUM di-scan (bug: nuclei 6x ke satu host,
+    # host lain terlewat) → jadinya percuma subfinder nemu 15 subdomain.
+    coverage = _host_coverage(run_id)
+    if coverage:
+        summary += "\n\nHost live hasil recon (WAJIB semua di-cover tool vuln/exploit):\n" + coverage
+    return summary
+
+
+def _host_coverage(run_id: str) -> str:
+    """Daftar host live + status tool per host: belum di-scan / sudah tool apa saja."""
+    live_path = settings.EVIDENCE_DIR / run_id / "httpx_live_hosts.txt"
+    if not live_path.is_file():
+        return ""
+    hosts: list[str] = []
+    for ln in live_path.read_text(encoding="utf-8").splitlines():
+        h = ln.split(" ", 1)[0].strip()
+        if h:
+            hosts.append(h)
+    if not hosts:
+        return ""
+    # tool per host: ekstrak host asli dari args CLI (field 'target' = asset root,
+    # tidak menunjuk host spesifik). args contoh: --url https://x.low.my.id / -u host
+    done: dict[str, set] = {h: set() for h in hosts}
+    ev = db.query(
+        "SELECT type, payload FROM run_events WHERE run_id = %s "
+        "AND type IN ('tool_started','tool_completed') ORDER BY id",
+        (run_id,),
+    )
+    import re as _re
+
+    _OPT_WITH_VALUE = {"-u", "-l", "-severity", "-tags", "-o", "-url", "-target", "-tech-detect"}
+
+    def _hosts_from_args(args) -> list[str]:
+        out: list[str] = []
+        skip_next = False
+        for a in args or []:
+            a = str(a)
+            if skip_next:
+                skip_next = False
+                m = _re.match(r"^https?://([^/:]+)", a)
+                if m:
+                    out.append(m.group(1))
+                continue
+            if a in _OPT_WITH_VALUE:
+                skip_next = a in ("-u", "-target", "-url")
+                continue
+            if a.startswith("-"):
+                continue
+            m = _re.match(r"^https?://([^/:]+)", a)
+            if m:
+                out.append(m.group(1))
+            elif _re.fullmatch(r"[A-Za-z0-9.-]+\.[A-Za-z]{2,}", a):
+                out.append(a)
+        return out
+
+    for r in ev:
+        p = r["payload"]
+        if isinstance(p, str):
+            try:
+                p = json.loads(p)
+            except Exception:
+                p = {}
+        tool = str(p.get("tool") or "")
+        if not tool or tool in ("subfinder", "httpx"):
+            continue
+        # input_file multi-host (cms_check) → semua host kena tool itu
+        args = p.get("args") or []
+        has_input_file = any(str(a).endswith("httpx_live_hosts.txt") for a in args)
+        if has_input_file:
+            for h in hosts:
+                done[h].add(tool)
+            continue
+        for tgt in _hosts_from_args(args):
+            for h in hosts:
+                if h == tgt:  # exact match saja — scan root tidak menutup subdomain
+                    done[h].add(tool)
+    lines = []
+    for h in hosts:
+        tl = ",".join(sorted(done[h])) if done[h] else ""
+        lines.append(f"- {h}: {'BELUM di-scan tool vuln/exploit apa pun' if not tl else tl}")
+    return "\n".join(lines)
 
 
 def _extract_tool_call(message: dict) -> tuple[str, dict] | None:
