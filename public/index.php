@@ -19,7 +19,7 @@ if (PHP_SAPI === 'cli-server') {
 
 // Autoload sederhana per konvensi folder (tanpa composer).
 spl_autoload_register(static function (string $class): void {
-    foreach (['Core', 'Models', 'Controllers', 'Mock'] as $dir) {
+    foreach (['Core', 'Models', 'Controllers'] as $dir) {
         $file = BASE_PATH . '/src/' . $dir . '/' . $class . '.php';
         if (is_file($file)) {
             require $file;
