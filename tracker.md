@@ -26,6 +26,10 @@ Bugfix dedup hard: nuclei 3x param identik ke host sama (AI ignore
 'jangan ulangi' prompt) → _tool_sig (host normalisasi scheme/port +
 tags sort) + set done_sigs per phase, call identik → tool_skipped.
 E2E: 3 duplikat tertolak, AI pindah host, run completed + report.
+Fix tabel report overflow: table-layout fixed + font 7pt/6.5pt +
+overflow-wrap + colgroup proporsional (host 17%, tech 19%, dst) —
+tabel 8 kolom recon tidak lagi keluar lebar kertas (verified pixel:
+margin kanan bersih di semua halaman, dark tetap).
 Bugfix coverage: AI dulunya bolak-balik scan 1 host (nuclei 6x hunters) —
 host live lain terlewat padahal subfinder nemu subdomain. Fix 3 lapis
 (coverage tracker di running summary + rule COVERAGE WAJIB di system

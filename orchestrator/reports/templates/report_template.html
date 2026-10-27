@@ -40,10 +40,11 @@
   .sev-low      { background: #22D3EE; color: #06202B; }
   .sev-info     { background: #64748B; }
 
-  table.data { width: 100%; border-collapse: collapse; margin: 6pt 0 10pt; }
-  table.data th { background: #0E1626; text-align: left; padding: 5pt 7pt; font-size: 8.5pt; text-transform: uppercase; letter-spacing: 0.5px; border: 1px solid #1E293B; color: #7DD3FC; }
-  table.data td { padding: 5pt 7pt; border: 1px solid #1E293B; vertical-align: top; color: #C7D3E3; }
+  table.data { width: 100%; border-collapse: collapse; margin: 6pt 0 10pt; table-layout: fixed; }
+  table.data th { background: #0E1626; text-align: left; padding: 3pt 4pt; font-size: 6.5pt; text-transform: uppercase; letter-spacing: 0.3px; border: 1px solid #1E293B; color: #7DD3FC; }
+  table.data td { padding: 3pt 4pt; border: 1px solid #1E293B; vertical-align: top; color: #C7D3E3; font-size: 7pt; overflow-wrap: break-word; }
   table.data tr:nth-child(even) td { background: #0A101C; }
+  table.data td.mono, table.data .mono { font-size: 6.5pt; }
 
   .finding { border: 1px solid #1E293B; border-left: 4px solid #22D3EE; border-radius: 4pt; padding: 8pt 10pt; margin: 10pt 0; page-break-inside: avoid; background: #0A101C; }
   .finding.sev-critical { border-left-color: #F43F5E; }
@@ -95,6 +96,10 @@
 (subfinder), {{ live_hosts_total }} di antaranya aktif/terukur (httpx). Deteksi CMS/stack
 per host (cms_check) menentukan template nuclei yang dipakai pada fase berikutnya.</p>
 <table class="data">
+  <colgroup>
+    <col style="width:17%"><col style="width:6%"><col style="width:12%"><col style="width:11%">
+    <col style="width:19%"><col style="width:10%"><col style="width:15%"><col style="width:10%">
+  </colgroup>
   <thead><tr>
     <th>Host</th><th>Status</th><th>Title</th><th>IP</th>
     <th>Tech / Stack</th><th>Server</th><th>CMS (versi)</th><th>PHP</th>
