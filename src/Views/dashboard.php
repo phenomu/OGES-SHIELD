@@ -267,7 +267,7 @@ if (is_array($tj) && isset($tj['tools'])) {
         $pipeline[] = ['id' => $t['id'], 'name' => $t['name'], 'duration' => '—', 'status' => 'pending'];
     }
 }
-$engineP = ['runtime' => 'online', 'model' => 'glm-5.3', 'workers' => $runsActive, 'workers_total' => 8, 'queue' => 0, 'deps' => 'ok'];
+$engineP = ['runtime' => 'online', 'model' => AiEngine::model(), 'workers' => $runsActive, 'workers_total' => 8, 'queue' => 0, 'deps' => 'ok'];
 $envStatus = [
     ['label' => 'Target Authorization', 'status' => $targetsInScope > 0 ? 'online' : 'offline'],
     ['label' => 'Go Tools Engine', 'status' => 'online'],
@@ -439,9 +439,9 @@ function step_status_icon(string $status): string
         <p class="panel-subtitle">Live feed keputusan AI — tool selesai, ringkasan, &amp; pilihan berikutnya</p>
       </div>
       <?php if ($latestRun): ?>
-        <span class="badge badge-cyan"><span class="dot"></span>glm-5.3 · run <?= e(substr((string) $latestRun['id'], 0, 8)) ?></span>
+        <span class="badge badge-cyan"><span class="dot"></span><?= e($engineP['model']) ?> · run <?= e(substr((string) $latestRun['id'], 0, 8)) ?></span>
       <?php else: ?>
-        <span class="badge badge-cyan"><span class="dot"></span>glm-5.3</span>
+        <span class="badge badge-cyan"><span class="dot"></span><?= e($engineP['model']) ?></span>
       <?php endif; ?>
     </div>
     <?php if ($latestRun): ?>

@@ -11,27 +11,17 @@ $isSuper = ($user['role'] ?? '') === 'superadmin';
 $activeRun = ActiveRun::current($user);
 $runOptions = ActiveRun::list($user, 30);
 
-// health orchestrator (internal, network-only — jangan expose lebih dari status)
-// URL dari env supaya jalan sama di host (127.0.0.1) maupun docker (orchestrator:8100)
-$orchUrl = rtrim((string) Env::get('ORCHESTRATOR_URL', 'http://127.0.0.1:8100'), '/');
-$orchHost = (string) (parse_url($orchUrl, PHP_URL_HOST) ?: '127.0.0.1')
-    . ':' . (string) (parse_url($orchUrl, PHP_URL_PORT) ?: '8100');
-
-$aiHealth = null;
-$ch = @curl_init($orchUrl . '/health');
-if ($ch) {
-    curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => 3]);
-    $resp = @curl_exec($ch);
-    $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    curl_close($ch);
-    if ($resp !== false && $code === 200) {
-        $aiHealth = json_decode((string) $resp, true);
-    }
-}
-$aiOnline = is_array($aiHealth) && ($aiHealth['status'] ?? '') === 'ok';
-$aiVersion = (string) ($aiHealth['version'] ?? '—');
-$toolsLoaded = (int) ($aiHealth['tools_loaded'] ?? $aiHealth['tools'] ?? 0);
-$model = (string) ($aiHealth['model'] ?? 'glm-5.3');
+// status engine AI — URL + model dibaca dari env, tidak hardcoded
+$aiEngine       = AiEngine::status();
+$aiOnline       = $aiEngine['online'];
+$aiVersion      = $aiEngine['version'] !== '' ? $aiEngine['version'] : '—';
+$toolsLoaded    = $aiEngine['tools_loaded'];
+$model          = $aiEngine['model'];
+$modelFallback  = $aiEngine['model_fallback'];
+$orchHost       = $aiEngine['host'];
+$safetyLimit    = (int) (Env::get('MAX_TOOL_CALLS_PER_PHASE', '10') ?: 10)
+    . ' tool calls/phase · '
+    . (int) (Env::get('MAX_TIME_PER_PHASE_SECONDS', '900') ?: 900) . 's/phase';
 
 $flash = Session::flash('wf_success') ?? Session::flash('run_error');
 ?>
@@ -104,10 +94,10 @@ $flash = Session::flash('wf_success') ?? Session::flash('run_error');
     </div>
     <div class="fd-fields">
       <div class="fd-field"><span class="fd-label">MODEL UTAMA</span><span class="fd-value mono"><?= e($model) ?></span></div>
-      <div class="fd-field"><span class="fd-label">FALLBACK</span><span class="fd-value mono">glm-5.2</span></div>
+      <div class="fd-field"><span class="fd-label">FALLBACK</span><span class="fd-value mono"><?= e($modelFallback) ?></span></div>
       <div class="fd-field"><span class="fd-label">ORCHESTRATOR</span><span class="fd-value mono"><?= e($orchHost) ?> · v<?= e($aiVersion) ?></span></div>
       <div class="fd-field"><span class="fd-label">TOOLS TERBACA</span><span class="fd-value mono"><?= $toolsLoaded ?> tool</span></div>
-      <div class="fd-field"><span class="fd-label">SAFETY LIMIT</span><span class="fd-value mono">10 tool calls/phase · 900s/phase</span></div>
+      <div class="fd-field"><span class="fd-label">SAFETY LIMIT</span><span class="fd-value mono"><?= e($safetyLimit) ?></span></div>
       <div class="fd-field"><span class="fd-label">API KEY</span><span class="fd-value mono">•••••••• (hidden, hanya di orchestrator .env)</span></div>
     </div>
   </section>

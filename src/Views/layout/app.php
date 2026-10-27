@@ -21,7 +21,7 @@
 <script defer src="/assets/js/chart.umd.min.js"></script>
 <script defer src="/assets/js/app.js"></script>
 </head>
-<body class="app-shell">
+<body class="app-shell" data-ai-model="<?= e(AiEngine::model()) ?>">
 <?php require BASE_PATH . '/src/Views/partials/topbar.php'; ?>
 <?php require BASE_PATH . '/src/Views/partials/sidebar.php'; ?>
 <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
