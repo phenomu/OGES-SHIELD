@@ -11,9 +11,14 @@ $isSuper = ($user['role'] ?? '') === 'superadmin';
 $activeRun = ActiveRun::current($user);
 $runOptions = ActiveRun::list($user, 30);
 
-// health orchestrator (internal, localhost-only — jangan expose lebih dari status)
+// health orchestrator (internal, network-only — jangan expose lebih dari status)
+// URL dari env supaya jalan sama di host (127.0.0.1) maupun docker (orchestrator:8100)
+$orchUrl = rtrim((string) Env::get('ORCHESTRATOR_URL', 'http://127.0.0.1:8100'), '/');
+$orchHost = (string) (parse_url($orchUrl, PHP_URL_HOST) ?: '127.0.0.1')
+    . ':' . (string) (parse_url($orchUrl, PHP_URL_PORT) ?: '8100');
+
 $aiHealth = null;
-$ch = @curl_init('http://127.0.0.1:8100/health');
+$ch = @curl_init($orchUrl . '/health');
 if ($ch) {
     curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => 3]);
     $resp = @curl_exec($ch);
@@ -100,7 +105,7 @@ $flash = Session::flash('wf_success') ?? Session::flash('run_error');
     <div class="fd-fields">
       <div class="fd-field"><span class="fd-label">MODEL UTAMA</span><span class="fd-value mono"><?= e($model) ?></span></div>
       <div class="fd-field"><span class="fd-label">FALLBACK</span><span class="fd-value mono">glm-5.2</span></div>
-      <div class="fd-field"><span class="fd-label">ORCHESTRATOR</span><span class="fd-value mono">127.0.0.1:8100 · v<?= e($aiVersion) ?></span></div>
+      <div class="fd-field"><span class="fd-label">ORCHESTRATOR</span><span class="fd-value mono"><?= e($orchHost) ?> · v<?= e($aiVersion) ?></span></div>
       <div class="fd-field"><span class="fd-label">TOOLS TERBACA</span><span class="fd-value mono"><?= $toolsLoaded ?> tool</span></div>
       <div class="fd-field"><span class="fd-label">SAFETY LIMIT</span><span class="fd-value mono">10 tool calls/phase · 900s/phase</span></div>
       <div class="fd-field"><span class="fd-label">API KEY</span><span class="fd-value mono">•••••••• (hidden, hanya di orchestrator .env)</span></div>

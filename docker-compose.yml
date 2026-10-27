@@ -1,0 +1,143 @@
+name: oges-shield
+
+# OGES-SHIELD — full stack: web (PHP/Apache) + orchestrator (FastAPI) + MySQL + target demo.
+#   docker compose up -d --build
+#   → http://localhost:8000  (login: admin / oges-admin-123)
+#
+# Secret AI dibaca dari orchestrator/.env kalau ada (env_file, required:false),
+# tapi nilai environment: di bawah SELALU menang — jadi DB/orchestrator host
+# tetap diarahkan ke nama service docker.
+
+services:
+  db:
+    image: mysql:8.0
+    container_name: oges-db
+    restart: unless-stopped
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --default-authentication-plugin=mysql_native_password
+      - --explicit_defaults_for_timestamp=1
+    environment:
+      MYSQL_ROOT_PASSWORD: oges_root_dev
+      MYSQL_DATABASE: oges_shield
+      MYSQL_USER: oges
+      MYSQL_PASSWORD: oges_dev
+      TZ: UTC
+    volumes:
+      - oges_mysql_data:/var/lib/mysql
+      # hanya dieksekusi saat volume masih kosong (init pertama)
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    ports:
+      # bind ke loopback saja — DB tidak pernah terbuka ke jaringan luar
+      - "127.0.0.1:3307:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uoges", "-poges_dev", "--silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+    networks: [oges]
+
+  web:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+    image: oges-shield-web:latest
+    container_name: oges-web
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - path: ./.env
+        required: false
+    environment:
+      # menang atas env_file: arahkan ke nama service docker
+      DB_HOST: db
+      DB_PORT: "3306"
+      DB_NAME: oges_shield
+      DB_USER: oges
+      DB_PASS: oges_dev
+      APP_ENV: production
+      APP_URL: http://localhost:8000
+      ORCHESTRATOR_URL: http://orchestrator:8100
+      # seed superadmin otomatis saat users masih kosong
+      OGES_SEED_ADMIN: "1"
+      OGES_ADMIN_EMAIL: admin@oges.local
+      OGES_ADMIN_USER: admin
+      OGES_ADMIN_NAME: OGES Admin
+      OGES_ADMIN_PASS: oges-admin-123
+    volumes:
+      # shared: orchestrator menulis PDF di sini, web mengalirkannya ke user
+      - ./storage:/app/storage
+      # shared: admin UI (Tool Registry) menulis tools.json yang dibaca orchestrator
+      - ./orchestrator/config:/app/orchestrator/config
+    ports:
+      - "8000:80"
+    networks: [oges]
+
+  orchestrator:
+    build:
+      context: .
+      dockerfile: docker/orchestrator/Dockerfile
+    image: oges-shield-orchestrator:latest
+    container_name: oges-orchestrator
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    # AI_ROUTER_API_KEY dari file ini (tidak di-commit, tidak masuk image)
+    env_file:
+      - path: ./orchestrator/.env
+        required: false
+    environment:
+      DB_HOST: db
+      DB_PORT: "3306"
+      DB_NAME: oges_shield
+      DB_USER: oges
+      DB_PASS: oges_dev
+      BIN_DIR: /app/bin
+      ORCHESTRATOR_HOST: 0.0.0.0
+      ORCHESTRATOR_PORT: "8100"
+      MAX_TOOL_CALLS_PER_PHASE: "10"
+      MAX_TIME_PER_PHASE_SECONDS: "900"
+    volumes:
+      - ./storage:/app/storage
+      - ./orchestrator/config:/app/orchestrator/config
+    expose:
+      - "8100"
+    # Tidak ada ports: — orchestrator HANYA bisa dihubungi dari network internal.
+    # Debug manual: docker compose exec orchestrator curl -s localhost:8100/health
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8100/health', timeout=3).status==200 else 1)\""]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+    networks: [oges]
+
+  # Target demo (WordPress 5.6.40 + PHP 5.6.40 palsu) — daftarkan sebagai:
+  #   http://mockwp:8899/   (type=url, environment=lab, in_scope=1)
+  mockwp:
+    image: python:3.11-slim
+    container_name: oges-mockwp
+    restart: unless-stopped
+    environment:
+      MOCK_WP_HOST: 0.0.0.0
+      MOCK_WP_PORT: "8899"
+    volumes:
+      - ./scripts:/app/scripts:ro
+    command: ["python3", "/app/scripts/mock_wp_server.py"]
+    ports:
+      - "127.0.0.1:8899:8899"
+    networks: [oges]
+
+volumes:
+  oges_mysql_data:
+    name: oges_mysql_data
+
+networks:
+  oges:
+    name: oges-net
+    driver: bridge
