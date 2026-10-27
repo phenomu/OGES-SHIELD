@@ -9,10 +9,11 @@
 > - Target total: **10–14 hari kerja**. Estimasi hari per phase adalah PANDUAN, boleh geser asal
 >   urutan prioritas (UI/UX dulu, backend belakangan) tetap dipegang.
 
-**Status project saat ini:** 🟢 Phase 6 paruh akhir — SPA navigation + fix run page
-live + 3 tool custom exploit chain (wp_check/php_check/php2shell) + demo chain
-otonom terbukti (run b4776e1e: httpx→wp/php check→6 findings→php2shell
-CRITICAL→report.pdf). Sisa 🔵 nice-to-have: responsive, dekorasi cyberpunk.
+**Status project saat ini:** 🟢 Phase 6 paruh akhir — SPA nav + fix run page live +
+exploit chain + CMS checker multi-host adaptif (cms_check + nuclei template_tags).
+Terbukti: run 29c66af2 (low.my.id, 8 subdomain) — cms_check 1× semua host, AI
+panggil nuclei per host dengan template_tags SESUAI CMS (hunters.low.my.id
+Laravel → tags ["laravel"]). Sisa 🔵 nice-to-have: responsive, dekorasi cyberpunk.
 
 ---
 
@@ -389,6 +390,9 @@ memalukan di depan juri, dan guardrail keamanan dasar sudah dicek manual sekali.
 | 2026-10-27 | 3 tool custom exploit chain: wp_check (WP ver + CVE offline), php_check (PHP ver + CVE), php2shell (POC benign reachability) | Request user: chain fully-automated recon→enum→WP/PHP detect→exploit→report. Terbukti run b4776e1e autonomous 6 findings + CRITICAL |
 | 2026-10-27 | `inject_script_paths` pindah ke tools/runner.py (mapping _CUSTOM_TOOLS) | Circular import: ai.loop ↔ tools.runner bila mapping di loop |
 | 2026-10-27 | Target demo mock: scripts/mock_wp_server.py (WP 5.6.40 + PHP 5.6.40, port 8899) | Butuh target in-scope terkontrol dengan CVE match nyata utk demo chain tanpa scan publik |
+| 2026-10-27 | cms_check.py: CMS checker multi-host (WP/Laravel/cPanel/webmail + PHP ver + rekomendasi template nuclei per host); httpx_live_hosts.txt artefak | Request user: decision point sebelum nuclei, template sesuai CMS, semua subdomain ikut |
+| 2026-10-27 | nuclei + param template_tags (array, comma-join) — AI pilih tag sesuai hasil cms_check | Request user: "tidak mungkin CMS wordpress pakai template ojs" — AI diarahkan schema description |
+| 2026-10-27 | Runner: tipe array param valid; placeholder kosong → skip flag-nya (bug `-tags ""`/argv kosong); scope url match host:port | Bug live: nuclei KeyError template_tags; cms_check argv kosong; subfinder scope reject url target |
 | | | |
 
 ## Risiko / Blocker yang Diketahui

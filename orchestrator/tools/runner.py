@@ -87,6 +87,14 @@ def validate_params(tool: dict, params: dict) -> dict:
         elif ptype == "boolean":
             if not isinstance(value, bool):
                 raise ToolValidationError(f"parameter '{key}' wajib boolean")
+        elif ptype == "array":
+            if not isinstance(value, list) or not all(isinstance(v, str) for v in value):
+                raise ToolValidationError(f"parameter '{key}' wajib array of string")
+            for v in value:
+                if _FORBIDDEN.search(v):
+                    raise ToolValidationError(
+                        f"parameter '{key}' mengandung karakter terlarang (shell metachar)"
+                    )
         else:
             raise ToolValidationError(f"tipe parameter '{key}' tidak didukung runner")
         if "enum" in pdef and value not in pdef["enum"]:
@@ -129,6 +137,7 @@ def assert_scope(run_id: str, tool: dict, params: dict) -> dict:
     declared = str(target["value"])
     ttype = str(target["type"])
     used_values = [v for v in params.values() if isinstance(v, str)]
+    # array param (mis. template_tags) bukan nilai target — tidak ikut scope check
     # input_file: baca isi file, tiap host/baris jadi nilai yang di-scope-check
     file_hosts: list[str] = []
     for pname, pval in params.items():
@@ -159,7 +168,19 @@ def assert_scope(run_id: str, tool: dict, params: dict) -> dict:
                 return host == declared or host.endswith("." + declared)
             except ValueError:
                 return False
-        if ttype in ("url", "ip"):
+        if ttype == "url":
+            # nilai = url sama / path di bawahnya; atau host:port polos
+            if v == declared or v.startswith(declared.rstrip("/") + "/"):
+                return True
+            d = declared.rstrip("/")
+            if v == d.rsplit("://", 1)[-1]:  # '127.0.0.1:8899' == '127.0.0.1:8899'
+                return True
+            # nilai domain polos utk url ip-only
+            dh = d.rsplit("://", 1)[-1]
+            if v == dh.split(":")[0] and dh.replace(":", "").replace(".", "").isdigit():
+                return True
+            return False
+        if ttype == "ip":
             return v == declared or v.startswith(declared.rstrip("/") + "/")
         if ttype == "cidr":
             import ipaddress
@@ -239,6 +260,7 @@ _CUSTOM_TOOLS: dict[str, str] = {
     "custom_wp_check": "wp_check.py",
     "custom_php_check": "php_check.py",
     "custom_php2shell": "php2shell.py",
+    "custom_cms_check": "cms_check.py",
 }
 
 
@@ -269,15 +291,31 @@ def run_tool(run_id: str, tool_id: str, params: dict, user_id: int | None = None
 
     binary, args_template = _resolve_binary(tool["command_template"])
     # rakit argumen dari template — placeholder {name} diisi param tervalidasi
+    tokens = args_template.split()
     args: list[str] = []
-    for tok in args_template.split():
+    i = 0
+    while i < len(tokens):
+        tok = tokens[i]
         m = _PLACEHOLDER_RE.fullmatch(tok)
         if m:
-            args.append(str(clean[m.group(1)]))
+            v = clean.get(m.group(1), "")  # param opsional tak diisi → kosong
+            if isinstance(v, list):
+                v = ",".join(v)  # array param → comma-separated (mis. tags nuclei)
+            v = str(v)
+            # placeholder kosong SETELAH flag (-xxx) → buang flag juga (skip pasangan)
+            if v == "" and i > 0 and tokens[i - 1].startswith("-"):
+                args.pop()  # flag sebelumnya
+                i += 1
+                continue
+            if v == "":
+                i += 1
+                continue  # placeholder kosong tanpa flag → skip (jangan kirim argv kosong)
+            args.append(v)
         elif "{" in tok or "}" in tok:
             raise ToolValidationError(f"template token rusak: {tok}")
         else:
             args.append(tok)
+        i += 1
 
     started_ts = datetime.now(timezone.utc)
     write_event(run_id, phase, "tool_started", {

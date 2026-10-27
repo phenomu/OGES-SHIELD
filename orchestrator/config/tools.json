@@ -60,7 +60,7 @@
         "vulnerability_assessment"
       ],
       "risk_level": "intrusive",
-      "command_template": "nuclei -u {target_url} -j -severity {severity_filter}",
+      "command_template": "nuclei -u {target_url} -j -severity {severity_filter} -tags {template_tags}",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -76,17 +76,23 @@
               "critical",
               "unknown"
             ]
+          },
+          "template_tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Tags template nuclei sesuai CMS/framework yang terdeteksi cms_check (mis. [\"wordpress\"], [\"cpanel\"], [\"laravel\"], [\"php\"]). WAJIB pilih tag yang cocok dengan hasil cms_check host tersebut — jangan pakai template tidak relevan (mis. OJS untuk WordPress)."
           }
         },
         "required": [
-          "target_url",
-          "severity_filter"
+          "target_url"
         ]
       },
       "output_parser": "jsonlines",
       "timeout_seconds": 600,
       "enabled": true,
-      "description": "Scan kerentanan berbasis template signature pada target. Hasil langsung dipetakan ke tabel findings."
+      "description": "Scan vulnerability dengan template nuclei. PILIH template_tags SESUAI CMS host target dari hasil cms_check (wordpress/cpanel/laravel/webmail/php). severity_filter: critical,high,medium,low. Gunakan setelah cms_check."
     },
     {
       "id": "custom_sqli_probe",
@@ -219,6 +225,39 @@
       "timeout_seconds": 120,
       "enabled": true,
       "description": "Validasi exploit path PHP (php2shell) dengan payload POC BENIGN — hanya cek reachability, tidak mengeksekusi command/shell. Pilih technique sesuai CVE yang ditemukan: filter_chain (CVE-2021-21707), fpm_underflow (CVE-2019-11043), upload_case (CVE-2024-31210)."
+    },
+    {
+      "id": "custom_cms_check",
+      "name": "CMS Checker — deteksi CMS/framework per host (Python custom)",
+      "category": "recon",
+      "valid_phases": [
+        "service_enumeration"
+      ],
+      "risk_level": "safe",
+      "command_template": "python3 {script_path} --input-file {input_file}",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "input_file": {
+            "type": "string",
+            "description": "Path file daftar host live (artefak httpx_live_hosts.txt / subfinder_hosts.txt dari fase sebelumnya — lihat daftar artefak). Jangan mengarang path sendiri."
+          },
+          "script_path": {
+            "type": "string",
+            "description": "(diisi orchestrator, bukan AI)"
+          }
+        },
+        "required": [
+          "input_file"
+        ]
+      },
+      "output_parser": "jsonlines",
+      "dependency": [
+        "httpx"
+      ],
+      "timeout_seconds": 300,
+      "enabled": true,
+      "description": "Deteksi CMS/framework TIAP host live (WordPress, Laravel, cPanel, webmail Roundcube, PHP version) + rekomendasi template nuclei per host. WAJIB jalan PERTAMA di service enumeration untuk semua host sekaligus sebelum vulnerability assessment — hasilnya menentukan tool/template apa yang relevan per subdomain (mis. host WordPress → nuclei template wordpress, cpanel.low.my.id → template cpanel, mail host → template webmail). Juga deteksi versi PHP < 8 → sarankan nuclei template php + php exploit tools."
     }
   ]
 }

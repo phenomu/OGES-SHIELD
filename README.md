@@ -53,8 +53,12 @@ bash scripts/setup.sh    # install subfinder, httpx, nuclei, naabu ke bin/
 ## Demo chain exploit otomatis (contoh teruji)
 
 ```
-httpx (tech-detect: WordPress + PHP)
-  → AI pilih wp_check      → versi WordPress 5.6.40 + CVE match → findings
+subfinder (semua subdomain) → httpx (tech-detect per host)
+  → AI pilih cms_check      → CMS/framework PER HOST (WordPress/Laravel/cPanel/
+                              webmail) + versi PHP + rekomendasi template nuclei
+  → AI pilih nuclei         → per host, template_tags SESUAI CMS host itu
+                              (host Laravel → tags laravel; host WP → wordpress)
+  → AI pilih wp/php_check   → versi + CVE match → findings
   → AI pilih php_check     → versi PHP 5.6.40 + CVE match      → findings
   → AI pilih nuclei        → vuln scan template
   → AI pilih php2shell     → POC benign valid → finding CRITICAL "exploit path valid"

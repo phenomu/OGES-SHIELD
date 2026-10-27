@@ -173,6 +173,31 @@ def _persist_artifacts(run_id: str, tool_id: str, result: dict) -> str | None:
         out_dir.mkdir(parents=True, exist_ok=True)
         path = out_dir / "httpx_results.json"
         path.write_text(json.dumps(records, ensure_ascii=False, indent=1), encoding="utf-8")
+        # live-host file: host [tech] — dipakai AI utk target berikutnya (nuclei, cms check)
+        lines: list[str] = []
+        for r in records:
+            h = str(r.get("host") or r.get("input") or "").strip()
+            if not h:
+                continue
+            tech = r.get("tech") or ""
+            tech_s = f" tech={tech}" if tech else ""
+            scheme = r.get("scheme") or "http"
+            lines.append(f"{h}{tech_s} url={scheme}://{h}")
+        (out_dir / "httpx_live_hosts.txt").write_text(
+            "\n".join(lines) + "\n", encoding="utf-8"
+        )
+        return str(path)
+    if tool_id == "custom_cms_check":
+        # hasil cms check per host → file teks utk konteks AI berikutnya
+        lines = []
+        for r in records:
+            if isinstance(r, dict):
+                lines.append(json.dumps(r, ensure_ascii=False))
+        if not lines:
+            return None
+        out_dir.mkdir(parents=True, exist_ok=True)
+        path = out_dir / "cms_check_results.json"
+        path.write_text("\n".join(lines) + "\n", encoding="utf-8")
         return str(path)
     return None
 
