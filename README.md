@@ -20,10 +20,23 @@ berikutnya — sampai workflow selesai dan menghasilkan `report.pdf`.
 
 ### 1. Database
 
+MySQL native / Docker / remote — apapun bisa, yang penting bisa diakses
+dari PHP & orchestrator (default `127.0.0.1:3306`). Contoh pakai docker
+(pilihan, bukan keharusan):
+
+```bash
+docker run -d --name oges-mysql -e MYSQL_ROOT_PASSWORD=rootpass \
+  -p 127.0.0.1:3306:3306 -v oges_mysql_data:/var/lib/mysql mysql:8.0
+```
+
 ```bash
 mysql -u root -p < database/schema.sql
 mysql -u root -p -e "CREATE USER IF NOT EXISTS 'oges'@'127.0.0.1' IDENTIFIED BY 'oges_dev'; GRANT ALL ON oges_shield.* TO 'oges'@'127.0.0.1';"
 ```
+
+> Catatan: repo ini TIDAK berisi Dockerfile/docker-compose — semua service
+> jalan native (PHP dev server + Python venv). MySQL via docker di atas
+> hanyalah cara cepat menyediakan DB, samakan saja akses dengan `.env`.
 
 ### 2. PHP app
 
@@ -44,7 +57,16 @@ cp .env.example .env              # edit: DB + AI_ROUTER_API_KEY (key 9router-mu
 # check: curl http://127.0.0.1:8100/health  → 200 {"status":"ok"}
 ```
 
-### 4. Go tools (Phase 3, opsional sekarang)
+### 4. Akun superadmin (wajib — login butuh akun)
+
+```bash
+php scripts/seed_admin.php admin@oges.local admin "Admin OGES" passwordpilihanmu
+```
+
+Setelah itu buka `http://127.0.0.1:8000/` → login → menu Assets daftarkan
+target in-scope → menu Workflows jalankan template.
+
+### 5. Go tools (opsional — binari sudah tersedia di `bin/`)
 
 ```bash
 bash scripts/setup.sh    # install subfinder, httpx, nuclei, naabu ke bin/
