@@ -382,9 +382,12 @@ kalau ada).
       ringan, tidak animasi (hindari beban demo).
 ### Antrean kerja berikutnya (belum dikerjakan)
 
-- [ ] 🔵 Sparkline stat-card dashboard → deret riil: findings + run per hari
-      12 titik terakhir (SQL GROUP BY DATE(created_at/finished_at)), ganti
-      array_fill flat. Cosmetik kecil — juri kemungkinan tidak sadar.
+- [x] 🔵 Sparkline stat-card dashboard → deret riil ✅
+      12 titik per hari (CURDATE()-INTERVAL n DAY, GROUP BY DATE): assets←
+      targets, hosts+ai←run_events, vulns/crit←findings, runs←finished_at.
+      Trend = delta hari terakhir vs sebelumnya, panah ikut sign, warna
+      merah saat arah buruk (vulns naik / asset turun). Verified: 6 canvas
+      tergambar, trend hosts ↑35 hijau, vulns ↑12 merah.
 - [ ] 🔵 Timeline chart Operations Overview (dashboard) → port pola recon.php:
       event tool asli run terbaru (labels HH:MM tool, passive = kumulatif
       subdomain subfinder, active = kumulatif host live httpx). Sekarang flat 0.

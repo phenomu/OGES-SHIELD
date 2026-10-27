@@ -35,17 +35,66 @@ $hostsDiscovered = (int) Database::run(
      WHERE re.type='tool_completed' AND JSON_EXTRACT(re.payload,'$.tool')='subfinder' AND $ownFilter"
 )->fetch()['n'];
 
+// sparkline deret riil: 12 titik per hari (kumulatif akhir hari), sumber per key:
+//   assets → targets dibuat; hosts → tool event subdomain/host ditemukan;
+//   vulns/crit → findings dibuat (crit: severity=critical);
+//   runs → run selesai; ai → tool_completed (aktivitas orkestrasi AI)
+$__sparkDays = [];
+try {
+    foreach (Database::run(
+        "SELECT d, IFNULL(v,0) v FROM (
+           SELECT CURDATE() - INTERVAL n DAY AS d, NULL AS v FROM (SELECT 0 n UNION SELECT 1 UNION SELECT 2 UNION SELECT 3 UNION SELECT 4 UNION SELECT 5 UNION SELECT 6 UNION SELECT 7 UNION SELECT 8 UNION SELECT 9 UNION SELECT 10 UNION SELECT 11) nums
+         ) days ORDER BY d"
+    )->fetchAll() as $r) { $__sparkDays[] = $r['d']; }
+} catch (Throwable $e) { $__sparkDays = []; }
+
+function __dailySeries(array $days, string $sql, array $params = []): array {
+    $counts = [];
+    if ($days) {
+        foreach (Database::run($sql, $params)->fetchAll() as $r) {
+            $counts[$r['d']] = (int) $r['v'];
+        }
+    }
+    return array_map(function ($d) use ($counts) { return $counts[$d] ?? 0; }, $days);
+}
+
+$sparks = [];
+if ($__sparkDays) {
+    $sparks['assets'] = __dailySeries($__sparkDays,
+        "SELECT DATE(created_at) d, COUNT(*) v FROM targets GROUP BY d");
+    $sparks['hosts'] = __dailySeries($__sparkDays,
+        "SELECT DATE(created_at) d, COUNT(*) v FROM run_events " .
+        "WHERE type IN ('tool_completed','finding') GROUP BY d");
+    $sparks['vulns'] = __dailySeries($__sparkDays,
+        "SELECT DATE(created_at) d, COUNT(*) v FROM findings WHERE severity IN ('critical','high','medium','low') GROUP BY d");
+    $sparks['crit'] = __dailySeries($__sparkDays,
+        "SELECT DATE(created_at) d, COUNT(*) v FROM findings WHERE severity='critical' GROUP BY d");
+    $sparks['runs'] = __dailySeries($__sparkDays,
+        "SELECT DATE(finished_at) d, COUNT(*) v FROM workflow_runs WHERE status IN ('completed','stopped') GROUP BY d");
+    $sparks['ai'] = __dailySeries($__sparkDays,
+        "SELECT DATE(created_at) d, COUNT(*) v FROM run_events WHERE type='tool_completed' GROUP BY d");
+} else {
+    foreach ($stats as $c) { $sparks[$c['key']] = array_fill(0, 12, (int) $c['value']); }
+}
+
+// trend riil = delta hari terakhir vs hari sebelumnya (dari deret spark)
+$__trend = [];
+foreach ($sparks as $k => $series) {
+    $n = count($series);
+    $last = $n ? (int) $series[$n - 1] : 0;
+    $prev = $n > 1 ? (int) $series[$n - 2] : 0;
+    $__trend[$k] = $last - $prev;
+}
+
 // stat cards format sama seperti MockData (icon/label/value/total/trend/spark)
 $stats = [
-    ['key' => 'assets',  'icon' => 'db',   'label' => 'Authorized Assets',    'value' => $targetsInScope, 'total' => $targetsTotal, 'trend' => 0, 'trend_up' => true],
-    ['key' => 'hosts',   'icon' => 'host', 'label' => 'Hosts Discovered',     'value' => $hostsDiscovered, 'total' => $hostsDiscovered, 'trend' => 0, 'trend_up' => true],
-    ['key' => 'vulns',   'icon' => 'warn', 'label' => 'Open Vulnerabilities', 'value' => $openVulns, 'total' => $findingsTotal, 'tone' => 'warning', 'trend' => 0, 'trend_up' => false],
-    ['key' => 'crit',    'icon' => 'crit', 'label' => 'Critical Findings',    'value' => $criticalCount, 'total' => $findingsTotal, 'tone' => 'danger', 'trend' => 0, 'trend_up' => false],
-    ['key' => 'runs',    'icon' => 'run',  'label' => 'Completed Runs',       'value' => $runsCompleted, 'total' => $runsTotal, 'trend' => 0, 'trend_up' => true],
-    ['key' => 'ai',      'icon' => 'ai',   'label' => 'AI Orchestrations Active', 'value' => $runsActive, 'total' => 8, 'trend' => 0, 'trend_up' => true],
+    ['key' => 'assets',  'icon' => 'db',   'label' => 'Authorized Assets', 'good' => true,    'value' => $targetsInScope, 'total' => $targetsTotal, 'trend' => (int)($__trend['assets'] ?? 0), 'trend_up' => true],
+    ['key' => 'hosts',   'icon' => 'host', 'label' => 'Hosts Discovered', 'good' => true,     'value' => $hostsDiscovered, 'total' => $hostsDiscovered, 'trend' => (int)($__trend['hosts'] ?? 0), 'trend_up' => true],
+    ['key' => 'vulns',   'icon' => 'warn', 'label' => 'Open Vulnerabilities', 'good' => false, 'value' => $openVulns, 'total' => $findingsTotal, 'tone' => 'warning', 'trend' => (int)($__trend['vulns'] ?? 0), 'trend_up' => false],
+    ['key' => 'crit',    'icon' => 'crit', 'label' => 'Critical Findings', 'good' => false,    'value' => $criticalCount, 'total' => $findingsTotal, 'tone' => 'danger', 'trend' => (int)($__trend['crit'] ?? 0), 'trend_up' => false],
+    ['key' => 'runs',    'icon' => 'run',  'label' => 'Completed Runs', 'good' => true,       'value' => $runsCompleted, 'total' => $runsTotal, 'trend' => (int)($__trend['runs'] ?? 0), 'trend_up' => true],
+    ['key' => 'ai',      'icon' => 'ai',   'label' => 'AI Orchestrations Active', 'good' => true, 'value' => $runsActive, 'total' => 8, 'trend' => (int)($__trend['ai'] ?? 0), 'trend_up' => true],
 ];
-$sparks = []; // sparkline dummy kecil per key (Chart.js butuh data deret — pakai nilai flat)
-foreach ($stats as $c) { $sparks[$c['key']] = array_fill(0, 12, (int) $c['value']); }
 
 // stepper + ops — dari run terbaru milik user
 $latestRunRow = Database::run(
@@ -248,7 +297,12 @@ function step_status_icon(string $status): string
         <span class="stat-value"><?= $card['value'] ?></span>
         <span class="stat-total">/ <?= $card['total'] ?></span>
         <span class="spacer"></span>
-        <span class="stat-trend<?= $card['trend_up'] ? '' : ' down' ?>"><?= $card['trend_up'] ? '↑' : '↓' ?> <?= $card['trend'] ?></span>
+        <span class="stat-trend<?php
+          $t = (int) $card['trend'];
+          $good = $card['good'] ?? true;
+          // panah = arah angka; warna merah bila perubahan buruk (vulns naik, asset turun)
+          $badMove = ($t > 0 && !$good) || ($t < 0 && $good);
+          echo $badMove ? ' down' : ''; ?>"><?= $t > 0 ? '↑' : ($t < 0 ? '↓' : '·') ?> <?= abs($t) ?></span>
       </div>
       <?php if (isset($card['progress'])): ?>
         <div class="stat-progress" title="<?= $card['progress'] ?>%"><div class="bar" style="width: <?= $card['progress'] ?>%"></div></div>
