@@ -22,6 +22,10 @@ code, title, IP, tech/stack, webserver+CDN, CMS+versi+framework, PHP
 versi — sumber artefak subfinder_hosts.txt + httpx_results.json +
 cms_check_results.json. Intro menyebut angka (15 subdomain, 8 live).
 Verified: 15 baris host muncul (offline dim tampil), dark tetap OK.
+Bugfix dedup hard: nuclei 3x param identik ke host sama (AI ignore
+'jangan ulangi' prompt) → _tool_sig (host normalisasi scheme/port +
+tags sort) + set done_sigs per phase, call identik → tool_skipped.
+E2E: 3 duplikat tertolak, AI pindah host, run completed + report.
 Bugfix coverage: AI dulunya bolak-balik scan 1 host (nuclei 6x hunters) —
 host live lain terlewat padahal subfinder nemu subdomain. Fix 3 lapis
 (coverage tracker di running summary + rule COVERAGE WAJIB di system
