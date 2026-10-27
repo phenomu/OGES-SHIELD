@@ -188,7 +188,7 @@ $tj = json_decode((string) @file_get_contents(BASE_PATH . '/orchestrator/config/
 if (is_array($tj) && isset($tj['tools'])) {
     foreach ($tj['tools'] as $t) {
         if (!is_array($t) || !($t['enabled'] ?? false)) continue;
-        $pipeline[] = ['name' => $t['name'], 'duration' => '—', 'status' => 'pending'];
+        $pipeline[] = ['id' => $t['id'], 'name' => $t['name'], 'duration' => '—', 'status' => 'pending'];
     }
 }
 $engineP = ['runtime' => 'online', 'model' => 'glm-5.3', 'workers' => $runsActive, 'workers_total' => 8, 'queue' => 0, 'deps' => 'ok'];
@@ -494,16 +494,22 @@ function step_status_icon(string $status): string
       <div class="ops-meta-item"><span class="ops-meta-label">QUEUE</span><span class="ops-meta-value"><?= $engineP['queue'] ?></span></div>
       <div class="ops-meta-item"><span class="ops-meta-label">DEPS</span><span class="ops-meta-value" style="color: var(--status-success)"><?= strtoupper($engineP['deps']) ?></span></div>
     </div>
-    <div class="pipeline">
+    <div class="pipeline" id="engine-pipeline">
       <?php foreach ($pipeline as $m): ?>
-        <div class="module-card">
+        <div class="module-card" data-module="<?= htmlspecialchars($m['id']) ?>">
           <span class="module-name"><?= htmlspecialchars($m['name']) ?></span>
           <span class="module-duration"><?= $m['duration'] ?></span>
           <span class="module-status <?= $m['status'] ?>"><?= strtoupper($m['status']) ?></span>
         </div>
       <?php endforeach; ?>
     </div>
+    <?php if ($latestRun): ?>
+    <div class="terminal mt-3" data-terminal="main" data-run-id="<?= e($latestRun['id']) ?>"></div>
+    <p class="panel-subtitle mt-3 mono">LIVE FEED: run <?= e(substr((string)$latestRun['id'], 0, 8)) ?> · <?= e($latestRun['status']) ?></p>
+    <?php else: ?>
     <div class="terminal mt-3" data-terminal="main"></div>
+    <p class="panel-subtitle mt-3">Belum ada run — buat workflow di menu Automation Workflows.</p>
+    <?php endif; ?>
     <div class="term-actions">
       <button type="button" class="btn btn-sm btn-primary" data-term-toggle="main">Live Logs: ON</button>
       <button type="button" class="btn btn-sm" data-term-clear="main">Clear</button>
