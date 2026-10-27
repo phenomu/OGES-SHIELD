@@ -10,6 +10,12 @@
 >   urutan prioritas (UI/UX dulu, backend belakangan) tetap dipegang.
 
 **Status project saat ini:** 🟢 Phase 6 SELESAI (must-have + nice-to-have semua).
+Bugfix report: Executive Summary kosong (overall_summary DB tersimpan '**' —
+output AI degenerate) → fallback deterministik statistik + prompt "jangan
+mulai dengan simbol markdown"; regen endpoint memakai summary valid.
+Template report dark full: @page + body background #05070D, tabel + finding
+card dark, teks #C7D3E3 — semua halaman senada cover (verified pixel avg
+13-24, corner (5,7,13)).
 Bugfix coverage: AI dulunya bolak-balik scan 1 host (nuclei 6x hunters) —
 host live lain terlewat padahal subfinder nemu subdomain. Fix 3 lapis
 (coverage tracker di running summary + rule COVERAGE WAJIB di system

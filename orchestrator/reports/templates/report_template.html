@@ -7,16 +7,17 @@
   @page {
     size: A4;
     margin: 2.2cm 1.8cm;
+    background: #05070D;
     @bottom-right { content: "Page " counter(page) " / " counter(pages); font-size: 8pt; color: #7c8797; }
     @bottom-left  { content: "OGES-SHIELD — confidential"; font-size: 8pt; color: #7c8797; }
   }
   @page cover { margin: 0; @bottom-right { content: none; } @bottom-left { content: none; } }
   * { box-sizing: border-box; }
-  body { font-family: "DejaVu Sans", sans-serif; font-size: 9.5pt; color: #1a2230; margin: 0; line-height: 1.5; }
+  body { font-family: "DejaVu Sans", sans-serif; font-size: 9.5pt; color: #C7D3E3; margin: 0; line-height: 1.5; background: #05070D; }
   .mono { font-family: "DejaVu Sans Mono", monospace; font-size: 8.5pt; }
   h1 { font-size: 20pt; margin: 0 0 4pt; letter-spacing: 1px; }
-  h2 { font-size: 13pt; margin: 18pt 0 6pt; border-bottom: 2px solid #22D3EE; padding-bottom: 3pt; }
-  h3 { font-size: 11pt; margin: 12pt 0 4pt; }
+  h2 { font-size: 13pt; margin: 18pt 0 6pt; border-bottom: 2px solid #22D3EE; padding-bottom: 3pt; color: #E5EDF5; }
+  h3 { font-size: 11pt; margin: 12pt 0 4pt; color: #E5EDF5; }
   p { margin: 0 0 8pt; }
 
   /* cover */
@@ -40,24 +41,24 @@
   .sev-info     { background: #64748B; }
 
   table.data { width: 100%; border-collapse: collapse; margin: 6pt 0 10pt; }
-  table.data th { background: #F1F5F9; text-align: left; padding: 5pt 7pt; font-size: 8.5pt; text-transform: uppercase; letter-spacing: 0.5px; border: 1px solid #CBD5E1; }
-  table.data td { padding: 5pt 7pt; border: 1px solid #E2E8F0; vertical-align: top; }
-  table.data tr:nth-child(even) td { background: #F8FAFC; }
+  table.data th { background: #0E1626; text-align: left; padding: 5pt 7pt; font-size: 8.5pt; text-transform: uppercase; letter-spacing: 0.5px; border: 1px solid #1E293B; color: #7DD3FC; }
+  table.data td { padding: 5pt 7pt; border: 1px solid #1E293B; vertical-align: top; color: #C7D3E3; }
+  table.data tr:nth-child(even) td { background: #0A101C; }
 
-  .finding { border: 1px solid #E2E8F0; border-left: 4px solid #22D3EE; border-radius: 4pt; padding: 8pt 10pt; margin: 10pt 0; page-break-inside: avoid; }
+  .finding { border: 1px solid #1E293B; border-left: 4px solid #22D3EE; border-radius: 4pt; padding: 8pt 10pt; margin: 10pt 0; page-break-inside: avoid; background: #0A101C; }
   .finding.sev-critical { border-left-color: #F43F5E; }
   .finding.sev-high     { border-left-color: #EC4899; }
   .finding.sev-medium   { border-left-color: #F59E0B; }
   .finding.sev-low      { border-left-color: #22D3EE; }
   .finding.sev-info     { border-left-color: #64748B; }
-  .finding .ftitle { font-weight: bold; font-size: 10.5pt; margin-bottom: 3pt; }
+  .finding .ftitle { font-weight: bold; font-size: 10.5pt; margin-bottom: 3pt; color: #E5EDF5; }
   .finding .kv { margin: 2pt 0; font-size: 9pt; }
-  .finding .kv b { color: #334155; display: inline-block; min-width: 100pt; }
-  .finding .refs a { color: #2563EB; text-decoration: none; font-size: 8.5pt; }
+  .finding .kv b { color: #94A3B8; display: inline-block; min-width: 100pt; }
+  .finding .refs a { color: #22D3EE; text-decoration: none; font-size: 8.5pt; }
 
   .summary-para { white-space: pre-wrap; text-align: justify; }
   .footnote { color: #7c8797; font-size: 8pt; margin-top: 4pt; }
-  .no-findings { padding: 14pt; background: #F0FDF4; border: 1px solid #BBF7D0; border-radius: 4pt; }
+  .no-findings { padding: 14pt; background: #0A101C; border: 1px solid #14532D; border-radius: 4pt; color: #C7D3E3; }
 </style>
 </head>
 <body>

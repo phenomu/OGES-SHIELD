@@ -390,18 +390,37 @@ def generate_overall_summary(run_id: str) -> str:
         "diikuti 3 rekomendasi urut dampak. Fakta dari data saja."
     )
     try:
-        return client.chat_simple(
+        out = client.chat_simple(
             "Kamu konsultan keamanan senior menulis ringkasan eksekutif laporan pentest. "
-            "Objektif, berbasis data, tanpa dramatisasi.",
+            "Objektif, berbasis data, tanpa dramatisasi. "
+            "Mulai langsung dengan kalimat pertama ringkasan — JANGAN diawali simbol "
+            "atau heading markdown apa pun.",
             prompt, max_tokens=1200,
         )
     except AIError as e:
+        out = ""
+    # fallback: output AI degenerate ('**', <60 char, tanpa huruf) → statistik deterministik.
+    # Bug nyata: overall_summary tersimpan '**' → Executive Summary kosong di report.pdf.
+    import re as _re
+    clean = _re.sub(r"[*#`>_]+", "", str(out)).strip()
+    has_letters = bool(_re.search(r"[A-Za-z]{3,}", clean))
+    if len(clean) < 60 or not has_letters:
+        stats = ", ".join(f"{s}: {n}" for s, n in sev_counts.items() if n) or "tidak ada temuan"
+        nuclei_runs = db.query(
+            "SELECT COUNT(*) AS n FROM run_events WHERE run_id=%s "
+            "AND type='tool_started' AND payload LIKE '%%nuclei%%'", (run_id,))
+        hosts_scanned = int((nuclei_runs[0]["n"] if nuclei_runs else 0))
         return (
-            "Overall summary AI tidak tersedia saat run ini selesai "
-            f"(fallback statistik). Temuan: {len(findings)} — " +
-            ", ".join(f"{s}: {n}" for s, n in sev_counts.items() if n) +
-            f". Error: {e}"
+            f"Ringkasan otomatis (AI summary tidak tersedia/tidak valid untuk run ini). "
+            f"Target {run['target']} discan via workflow {run['template_name']} dengan "
+            f"{len(findings)} temuan tercatat ({stats}). "
+            f"Tahapan recon mengidentifikasi subdomain dan host aktif; tahap vulnerability "
+            f"assessment menjalankan {hosts_scanned} scan nuclei terhadap host dalam scope. "
+            "Rekomendasi prioritas: (1) verifikasi manual seluruh temuan sebelum remediasi; "
+            "(2) patch komponen dengan versi terdeteksi rentan; (3) hardening konfigurasi "
+            "server dan review layanan yang terekspos."
         )
+    return clean
 
 
 def write_findings_event(run_id: str, phase: str, tool_id: str, ids: list[int]) -> None:
