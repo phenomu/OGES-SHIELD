@@ -1,0 +1,23 @@
+# Build context hygiene — jangan bawa secret / artefak runtime ke image.
+#
+# .env WAJIB di-exclude: Env::load() (PHP) memprioritaskan isi file .env di atas
+# environment process. Kalau .env host ikut ter-bake (DB_HOST=127.0.0.1), nilai
+# itu akan menimpa env docker (DB_HOST=db) dan app tidak bisa konek ke MySQL.
+.env
+.env.php
+**/.env
+**/.env.php
+**/.env.example
+
+.git
+.gitignore
+**/__pycache__
+**/*.pyc
+orchestrator/venv
+bin/
+storage/
+*.log
+.DS_Store
+.vscode
+.idea
+*.md

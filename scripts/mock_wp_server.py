@@ -6,10 +6,14 @@ dengan endpoint yang POC php2shell tandai valid. HANYA utk demo lokal —
 didaftarkan sebagai target in-scope di platform. Port 127.0.0.1:8899.
 """
 import http.server
+import os
 import socketserver
 import re
 
-PORT = 8899
+# BIND_HOST/HOST opsional — default 127.0.0.1 (lokal), set 0.0.0.0 di container
+# supaya bisa dijangkau orchestrator lewat nama service docker.
+HOST = os.getenv("MOCK_WP_HOST", "127.0.0.1")
+PORT = int(os.getenv("MOCK_WP_PORT", "8899"))
 WP_VER = "5.6.40"
 PHP_VER = "5.6.40"
 
@@ -56,6 +60,6 @@ class H(http.server.BaseHTTPRequestHandler):
 
 
 if __name__ == "__main__":
-    with socketserver.TCPServer(("127.0.0.1", PORT), H) as httpd:
-        print(f"mock WP {WP_VER} + PHP {PHP_VER} di http://127.0.0.1:{PORT}/")
+    with socketserver.TCPServer((HOST, PORT), H) as httpd:
+        print(f"mock WP {WP_VER} + PHP {PHP_VER} di http://{HOST}:{PORT}/")
         httpd.serve_forever()

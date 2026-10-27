@@ -22,18 +22,77 @@ final class Router
         $this->routes[strtoupper($method) . ' ' . $path] = $handler;
     }
 
-    public function dispatch(string $method, string $path): void
+    /**
+     * Normalisasi path request jadi daftar kandidat yang dicoba berurutan.
+     *
+     * Kenapa perlu: public/ punya direktori nyata yang namanya sama dengan route
+     * (`assets/`, `admin/`, `api/`). Saat browser membuka /assets, Apache
+     * (mod_dir) otomatis membalas 301 ke /assets/ karena itu direktori. Request
+     * /assets/ lalu sampai ke front controller dengan trailing slash, sedangkan
+     * route terdaftar sebagai /assets → tanpa normalisasi hasilnya 404.
+     * Berlaku untuk semua route, bukan cuma /assets.
+     *
+     * Aturan:
+     *   /assets/        ≡ /assets
+     *   /dashboard.php  ≡ /dashboard
+     *   /assets/.php    → /assets
+     *   /               tetap "/" (root tidak pernah dipangkas jadi "")
+     *
+     * @return list<string>
+     */
+    private function variants(string $path): array
     {
-        // Normalisasi path dengan atau tanpa .php (dashboard.php ≡ /dashboard)
-        $variants = [$path];
-        $pathNoExt = preg_replace('/\.php$/', '', $path);
-        if ($pathNoExt !== $path) {
-            $variants[] = $pathNoExt;
-            $variants[] = $pathNoExt . '.php';
+        $out = [];
+        $push = static function (string $p) use (&$out): void {
+            if ($p === '') {
+                $p = '/';
+            }
+            if (!in_array($p, $out, true)) {
+                $out[] = $p;
+            }
+        };
+
+        /** Buang trailing slash, jaga root tetap "/". */
+        $stripSlash = static function (string $p): string {
+            if ($p === '/' || $p === '') {
+                return '/';
+            }
+            $p = rtrim($p, '/');
+            return $p === '' ? '/' : $p;
+        };
+
+        /** Buang ekstensi .php. */
+        $stripExt = static function (string $p): string {
+            $p = preg_replace('/\.php$/', '', $p) ?? $p;
+            return $p === '' ? '/' : $p;
+        };
+
+        $push($path);
+
+        // Bentuk kanonik: tanpa trailing slash, tanpa .php, tanpa trailing slash
+        // (dibersihkan dua kali karena "/x/.php" menyisakan "/x/").
+        $canonical = $stripSlash($stripExt($stripSlash($path)));
+        $push($canonical);
+        $push($stripSlash($path));
+        $push($stripSlash($stripExt($path)));
+
+        // Alias ekstensi .php untuk bentuk kanonik dan ber-trailing-slash —
+        // hanya kalau belum berakhiran .php dan bukan root (hindari "/.php"
+        // atau "/x.php.php" yang cuma memboroskan lookup).
+        $withSlash = $stripSlash($path);
+        foreach ([$canonical, $withSlash] as $base) {
+            if ($base !== '/' && !str_ends_with($base, '.php')) {
+                $push($base . '.php');
+            }
         }
 
+        return $out;
+    }
+
+    public function dispatch(string $method, string $path): void
+    {
         $handler = null;
-        foreach ($variants as $v) {
+        foreach ($this->variants($path) as $v) {
             $handler = $this->routes[strtoupper($method) . ' ' . $v] ?? null;
             if ($handler !== null) {
                 break;

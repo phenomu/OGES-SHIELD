@@ -1,9 +1,10 @@
-# orchestrator dependencies (Phase 0 dasar)
+# orchestrator dependencies
 fastapi>=0.115
 uvicorn[standard]>=0.32
 pydantic>=2.9
 python-dotenv>=1.0
-pymysql>=1.1          # DB driver (pure-python, install gampang; ganti mysqlclient kalau mau cepat)
-httpx>=0.27           # panggilan ke 9router (OpenAI-compatible)
-weasyprint>=62        # report.pdf dari HTML template
-jinja2
+pymysql>=1.1          # DB driver (pure-python)
+cryptography>=42      # wajib utk MySQL 8 caching_sha2_password via PyMySQL
+httpx>=0.27           # panggilan ke AI router (OpenAI-compatible)
+weasyprint>=62        # report.pdf dari HTML template (butuh pango/cairo di OS)
+jinja2>=3.1
