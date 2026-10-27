@@ -357,8 +357,12 @@ kalau ada).
       pilih nav / resize besar. ≤768 grid 1-2 kolom, tabel scroll-x, terminal
       max-height 320. ≤480 topbar ringkas (avatar tanpa nama). E2E browser
       device-metrics: drawer open/close/backdrop/auto-close verified.
-- [ ] 🔵 Dekorasi cyberpunk tambahan (city skyline, aksara dekoratif) ala referensi — murni kosmetik,
+- [x] 🔵 Dekorasi cyberpunk tambahan (city skyline, aksara dekoratif) ala referensi — murni kosmetik,
       kerjakan hanya kalau semua 🟣 di atas sudah beres
+      Catatan: HUD corner brackets (cyan, .panel::before/::after — ala soc HUD),
+      city skyline SVG bawah halaman auth (login+register, mask gradient),
+      strip katakana ネットワーク・シールド di sidebar footer. Semua statis
+      ringan, tidak animasi (hindari beban demo).
 - [ ] ⚪ Email notification approval (cut kalau waktu tidak cukup)
 - [ ] ⚪ Multi-bahasa UI (cut, hackathon cukup 1 bahasa)
 
