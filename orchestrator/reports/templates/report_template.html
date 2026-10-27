@@ -58,6 +58,7 @@
 
   .summary-para { white-space: pre-wrap; text-align: justify; }
   .footnote { color: #7c8797; font-size: 8pt; margin-top: 4pt; }
+  .dim { color: #64748B; }
   .no-findings { padding: 14pt; background: #0A101C; border: 1px solid #14532D; border-radius: 4pt; color: #C7D3E3; }
 </style>
 </head>
@@ -88,8 +89,39 @@
 <p class="summary-para">{{ para }}</p>
 {% endfor %}
 
+<!-- ============================== RECON INVENTORY ============================== -->
+<h2>2. Reconnaissance — Attack Surface Inventory</h2>
+<p>Domain scope <b>{{ target }}</b> di-resolve menjadi {{ subdomains_total }} subdomain
+(subfinder), {{ live_hosts_total }} di antaranya aktif/terukur (httpx). Deteksi CMS/stack
+per host (cms_check) menentukan template nuclei yang dipakai pada fase berikutnya.</p>
+<table class="data">
+  <thead><tr>
+    <th>Host</th><th>Status</th><th>Title</th><th>IP</th>
+    <th>Tech / Stack</th><th>Server</th><th>CMS (versi)</th><th>PHP</th>
+  </tr></thead>
+  <tbody>
+  {% for r in recon_hosts %}
+    <tr>
+      <td class="mono">{{ r.host }}</td>
+      <td class="mono">{% if r.live %}{{ r.status }}{% else %}<span class="dim">offline</span>{% endif %}</td>
+      <td>{{ r.title }}</td>
+      <td class="mono">{{ r.ip }}</td>
+      <td>{{ r.tech }}</td>
+      <td>{{ r.webserver }}{% if r.cdn != '—' %} <span class="dim">({{ r.cdn }})</span>{% endif %}</td>
+      <td>{% if r.cms != '—' %}{{ r.cms }}{% if r.cms_version != '—' %} <span class="mono">{{ r.cms_version }}</span>{% endif %}{% if r.framework != '—' %} · {{ r.framework }}{% endif %}{% else %}<span class="dim">—</span>{% endif %}</td>
+      <td class="mono">{% if r.php_version != '—' %}{{ r.php_version }}{% else %}—{% endif %}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% if cms_detected %}
+<p class="footnote">Nuclei templates yang dipilih AI per host: dilihat dari kolom Tech/CMS di atas.
+CMS terdeteksi menerima template tag spesifik (mis. wordpress/laravel), host tanpa CMS
+menerima template teknologi umum.</p>
+{% endif %}
+
 <!-- ============================== SEVERITY DISTRIBUTION ============================== -->
-<h2>2. Severity Distribution</h2>
+<h2>3. Severity Distribution</h2>
 <table class="data">
   <thead><tr><th>Severity</th><th>Count</th><th>%</th></tr></thead>
   <tbody>
@@ -105,7 +137,7 @@
 
 {% if findings %}
 <!-- ============================== FINDINGS DETAIL ============================== -->
-<h2>3. Findings Detail</h2>
+<h2>4. Findings Detail</h2>
 {% for f in findings %}
 <div class="finding sev-{{ f.severity }}">
   <div class="ftitle">F-{{ f.id }} — {{ f.title }}</div>
@@ -132,7 +164,7 @@
 {% endif %}
 
 <!-- ============================== METHODOLOGY ============================== -->
-<h2>4. Methodology &amp; Tools</h2>
+<h2>5. Methodology &amp; Tools</h2>
 <p>Assessment dijalankan otomatis oleh orchestrator OGES-SHIELD. AI orchestrator
 memilih urutan tool berdasarkan hasil tahap sebelumnya, dengan scope enforcement
 server-side (hanya target terdaftar in-scope yang diuji) dan konfirmasi manusia

@@ -16,6 +16,12 @@ mulai dengan simbol markdown"; regen endpoint memakai summary valid.
 Template report dark full: @page + body background #05070D, tabel + finding
 card dark, teks #C7D3E3 — semua halaman senada cover (verified pixel avg
 13-24, corner (5,7,13)).
+Report v2: section Reconnaissance — Attack Surface Inventory (section 2,
+sebelum severity): tabel SEMUA host (subdomain ∪ live): host, status
+code, title, IP, tech/stack, webserver+CDN, CMS+versi+framework, PHP
+versi — sumber artefak subfinder_hosts.txt + httpx_results.json +
+cms_check_results.json. Intro menyebut angka (15 subdomain, 8 live).
+Verified: 15 baris host muncul (offline dim tampil), dark tetap OK.
 Bugfix coverage: AI dulunya bolak-balik scan 1 host (nuclei 6x hunters) —
 host live lain terlewat padahal subfinder nemu subdomain. Fix 3 lapis
 (coverage tracker di running summary + rule COVERAGE WAJIB di system

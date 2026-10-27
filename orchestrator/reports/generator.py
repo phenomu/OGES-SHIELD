@@ -76,6 +76,70 @@ def generate_report(run_id: str) -> dict:
             "records": p.get("record_count", 0),
         })
 
+    # ---- recon inventory (dari artefak tool di evidence dir) ----
+    # subfinder → semua subdomain; httpx → host live + status/title/tech;
+    # cms_check → CMS/versi/stack per host. Digabung jadi tabel host utk report.
+    ev_dir = settings.EVIDENCE_DIR / run_id
+    subdomains: list[str] = []
+    sf = ev_dir / "subfinder_hosts.txt"
+    if sf.is_file():
+        subdomains = [ln.strip() for ln in sf.read_text(encoding="utf-8").splitlines() if ln.strip()]
+    httpx_recs: list[dict] = []
+    hx = ev_dir / "httpx_results.json"
+    if hx.is_file():
+        try:
+            httpx_recs = json.loads(hx.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError):
+            httpx_recs = []
+    cms_recs: dict[str, dict] = {}
+    cc = ev_dir / "cms_check_results.json"
+    if cc.is_file():
+        try:
+            for ln in cc.read_text(encoding="utf-8").splitlines():
+                ln = ln.strip()
+                if not ln:
+                    continue
+                r = json.loads(ln)
+                if isinstance(r, dict) and r.get("host"):
+                    cms_recs[str(r["host"])] = r
+        except (json.JSONDecodeError, OSError):
+            pass
+
+    httpx_by_host: dict[str, dict] = {}
+    for r in httpx_recs:
+        h = str(r.get("host") or r.get("input") or "").strip()
+        if h:
+            httpx_by_host[h] = r
+    live_hosts = sorted(httpx_by_host.keys())
+
+    def _tech_list(r: dict) -> str:
+        t = r.get("tech")
+        if isinstance(t, list):
+            return ", ".join(str(x) for x in t[:6])
+        return str(t or "")
+
+    recon_hosts = []
+    for h in sorted(set(subdomains + live_hosts)):
+        hx_r = httpx_by_host.get(h, {})
+        cm = cms_recs.get(h, {})
+        recon_hosts.append({
+            "host": _esc(h),
+            "live": h in live_hosts,
+            "ip": _esc(hx_r.get("host_ip") or "—"),
+            "status": _esc(hx_r.get("status_code") or "—"),
+            "title": _esc(hx_r.get("title") or "—"),
+            "tech": _esc(_tech_list(hx_r) or "—"),
+            "webserver": _esc(hx_r.get("webserver") or "—"),
+            "cdn": _esc(hx_r.get("cdn_name") or "—"),
+            "scheme": _esc(hx_r.get("scheme") or "—"),
+            "cms": _esc(cm.get("cms") or "—"),
+            "cms_version": _esc(cm.get("cms_version") or "—"),
+            "php_version": _esc(cm.get("php_version") or "—"),
+            "framework": _esc(cm.get("framework") or "—"),
+            "nuclei_templates": _esc(", ".join(str(x) for x in (cm.get("nuclei_templates") or [])[:5]) or "—"),
+        })
+    cms_detected = any(rh["cms"] != "—" for rh in recon_hosts)
+
     # overall summary: dari row reports (kalau sudah ada) atau generate baru
     report_row = db.query_one(
         "SELECT overall_summary FROM reports WHERE run_id=%s", (run_id,))
@@ -143,6 +207,10 @@ def generate_report(run_id: str) -> dict:
         generated_at=_esc(generated_at),
         findings_total=total,
         summary_paras=summary_paras,
+        recon_hosts=recon_hosts,
+        subdomains_total=len(subdomains),
+        live_hosts_total=len(live_hosts),
+        cms_detected=cms_detected,
         sev_table=sev_table,
         findings=f_items,
         tool_runs=[{
