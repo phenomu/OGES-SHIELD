@@ -388,9 +388,11 @@ kalau ada).
       Trend = delta hari terakhir vs sebelumnya, panah ikut sign, warna
       merah saat arah buruk (vulns naik / asset turun). Verified: 6 canvas
       tergambar, trend hosts ↑35 hijau, vulns ↑12 merah.
-- [ ] 🔵 Timeline chart Operations Overview (dashboard) → port pola recon.php:
-      event tool asli run terbaru (labels HH:MM tool, passive = kumulatif
-      subdomain subfinder, active = kumulatif host live httpx). Sekarang flat 0.
+- [x] 🔵 Timeline chart Operations Overview (dashboard) → port pola recon.php ✅
+      Event tool_completed run terbaru milik user: labels = "HH:MM tool",
+      passive = kumulatif subfinder, active = kumulatif tool lain.
+      Fallback 2 titik flat kalau < 2 event. Verified: canvas tergambar,
+      labels "10:03 subfinder / 10:03 httpx" run 0c619a6b.
 - [ ] ⚪ Persistence Simulation — user kerjakan sendiri (tool custom via
       tools/template.py + valid_phases persistence_simulation + template)
 

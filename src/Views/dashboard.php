@@ -198,11 +198,36 @@ foreach ($inventory as $t) {
 }
 $inventory = $inventoryRows;
 
-$timeline = []; // timeline chart dummy minimal (butuh data deret — pakai flat)
-$timeline = [
-    'passive' => array_fill(0, 10, 0),
-    'active'  => array_fill(0, 10, 0),
-];
+// timeline discovery per event tool (port pola recon.php): passive =
+// kumulatif event subfinder, active = kumulatif event tool lain (httpx,
+// nuclei, custom) — run terbaru milik user
+$timeline = ['labels' => [], 'passive' => [], 'active' => []];
+if ($latestRunRow) {
+    $__tl = [];
+    foreach (Database::run(
+        "SELECT payload, created_at FROM run_events
+         WHERE run_id = ? AND type = 'tool_completed'
+         ORDER BY id",
+        [$latestRunRow['id']]
+    )->fetchAll(PDO::FETCH_ASSOC) as $ev) {
+        $pl = json_decode((string) $ev['payload'], true) ?: [];
+        $__tl[] = [
+            'tool' => (string) ($pl['tool'] ?? ''),
+            'time' => substr((string) $ev['created_at'], 11, 5),
+        ];
+    }
+    $__cumP = 0; $__cumA = 0;
+    foreach ($__tl as $te) {
+        if ($te['tool'] === 'subfinder') { $__cumP += 1; } else { $__cumA += 1; }
+        $timeline['labels'][] = $te['time'] . ' ' . $te['tool'];
+        $timeline['passive'][] = $__cumP;
+        $timeline['active'][] = $__cumA;
+    }
+}
+// minimal 2 titik biar garis terlihat
+if (count($timeline['labels']) < 2) {
+    $timeline = ['labels' => ['start', 'now'], 'passive' => [0, 0], 'active' => [0, 0]];
+}
 
 // findings terbaru milik user — untuk panel Vulnerability Assessment + detail
 $findings = Database::run(
