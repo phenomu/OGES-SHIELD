@@ -9,12 +9,11 @@
 > - Target total: **10–14 hari kerja**. Estimasi hari per phase adalah PANDUAN, boleh geser asal
 >   urutan prioritas (UI/UX dulu, backend belakangan) tetap dipegang.
 
-**Status project saat ini:** 🟡 Phase 6 berjalan (hardening security + UX polish: input
-whitelist, CSP nonce, XSS escape, dashboard/topbar data asli, notifikasi + dropdown,
-env toggle dihapus, Dokumentasi, resume+delete run, Current Engagement selector
-(session, ownership-tested), /recon /vulnerabilities /exploitation /settings data asli,
-httpx records + artefak persist; sisa: audit log page, demo prep, E2E akun baru —
-jeda menunggu instruksi user lanjut).
+**Status project saat ini:** 🟢 Phase 6 paruh akhir — sisa 🔵 nice-to-have (responsive,
+dekorasi cyberpunk). Semua 🟣 selesai: audit log page fungsional (+ export CSV),
+error-handling tool gagal teruji live, DEMO.md walkthrough, E2E akun baru penuh.
+Lampiran batch: engagement selector, template custom (modal visual + preview
+pipeline), data asli 4 halaman, timeline recon, docs 8 section.
 
 ---
 
@@ -300,7 +299,12 @@ kalau ada).
 
 ## Phase 6 — Polish, Hardening & Demo Prep (🟣 sebagian, 🔵 sebagian, estimasi 1.5–2 hari)
 
-- [ ] 🟣 Audit Logs page fungsional (baca dari log eksekusi tool + security events Phase 3)
+- [x] 🟣 Audit Logs page fungsional (baca dari log eksekusi tool + security events Phase 3)
+      Catatan: rewrite audit.php — data asli audit_logs (JOIN users), filter action (whitelist
+      22 nilai) + aktor (LIKE prefix) + pagination 50/hal, user biasa hanya lihat jejak
+      sendiri (privacy), badge severity per action, detail JSON diringkas 1 baris. Export CSV
+      via AuditController (BOM UTF-8, CSRF via query token — Session::checkCsrf kini terima
+      argumen opsional, limit 10000, audit `audit_exported`). Input GET is_string-hardened.
 - [x] 🟣 Review semua guardrail Bagian 9 `PROMPT.md` — checklist keamanan:
   - [x] Semua subprocess call pakai array args, bukan `shell=True` + string concat
   - [x] Semua query PHP pakai prepared statement
@@ -318,13 +322,28 @@ kalau ada).
       XSS: escape semua output tool di terminal/AI log (app.js esc()); semua input
       GET di-whitelist is_string (nav[], id[], sev[] dsb — fatal + warning mati);
       LFI: download PDF realpath + prefix storage/reports/.
-- [ ] 🟣 Error handling: tool gagal/timeout tidak bikin seluruh run macet (tandai failed, lanjut
+- [x] 🟣 Error handling: tool gagal/timeout tidak bikin seluruh run macet (tandai failed, lanjut
       atau stop phase dengan jelas di UI)
-- [ ] 🟣 Siapkan 1–2 target demo yang aman & terkontrol (mis. lab/CTF target sendiri, bukan target
+      Catatan: sudah ada sejak P3/P4 (tool_failed event → loop lanjut; phase fatal → run failed,
+      service tetap hidup) — diverifikasi live P6: execute-tool dengan script nonexistent →
+      tool_failed rc=2 → run lanjut → subfinder/httpx sukses → run COMPLETED + report.pdf.
+      Terminal UI render baris GAGAL merah (fmtEvent tool_failed).
+- [x] 🟣 Siapkan 1–2 target demo yang aman & terkontrol (mis. lab/CTF target sendiri, bukan target
       publik sembarangan) + walkthrough skenario demo
-- [ ] 🟣 Test ulang alur penuh dari akun baru: register → approval → login → set workflow →
+      Catatan: DEMO.md — script 8-10 menit (pra-demo checklist, dashboard, story akun baru,
+      target+scope, template, live run, findings+report, tutup security-first, rencana B jika
+      AI lambat). Target demo: low.my.id (domain sendiri, lab) + example.com backup. 3 run
+      completed + PDF siap.
+- [x] 🟣 Test ulang alur penuh dari akun baru: register → approval → login → set workflow →
       lihat AI jalan → lihat findings → download report
-- [ ] 🔵 Audit log export (CSV)
+      Catatan: E2E browser penuh dengan akun demo6293: register (justifikasi) → pending page →
+      admin approve → login → register target example.com (in-scope) → Set Workflow
+      (external-recon-only) → run d56104ed autonomous (21 event: subfinder 2 host →
+      httpx 2 live → mark_phase_complete ×2) → COMPLETED → report.pdf 24KB
+      (download 200, PDF v1.7). Findings 0 wajar (recon-only, example.com bersih).
+- [x] 🔵 Audit log export (CSV)
+      Catatan: sekaligus dengan audit page (lihat atas) — export 180 baris teruji, BOM, token
+      salah 403.
 - [x] 🔵 Notifikasi in-app (bell icon) benar-benar fungsional, bukan statis
       Catatan: dropdown dari run_events (confirmation_required / report_generated /
       run_failed / run_stopped) + badge count + link ke halaman run. Ditambah user
@@ -353,6 +372,9 @@ memalukan di depan juri, dan guardrail keamanan dasar sudah dicek manual sekali.
 | 2026-10-27 | Template custom (superadmin): create + delete, phase whitelist 8, scope_validation auto-prepend, report_generation selalu terakhir | User minta bisa bikin template sendiri; guardrail urutan phase dijaga server-side; template terpakai run tidak bisa dihapus (jejak audit) |
 | 2026-10-27 | Dropdown engagement max-height 330px + scroll; tombol Pilih/Terbaru sebaris di Settings | UI feedback user: dropdown panjang ke bawah; tombol reset aneh posisinya |
 | 2026-10-27 | Modal Buat Template v2: phase picker kartu visual (deskripsi, tool per phase live dari tools.json, badge RISK, nomor urut) + preview pipeline interaktif (JS) + submit disabled <2 phase | User feedback: modal polos; juga memperjelas phase tanpa tool (persistence) auto-complete |
+| 2026-10-27 | Audit page: user biasa hanya lihat jejaknya sendiri; superadmin semua | Privacy antar user; audit superadmin ditandai ★ |
+| 2026-10-27 | Export CSV pakai CSRF via query string (link `<a>` bukan form POST) | Link download tak bisa bawa POST; token tetap terikat session, salah token = 403 |
+| 2026-10-27 | `Session::checkCsrf()` kini terima argumen token opsional | Mendukung validasi token dari $_GET (export) tanpa merusak pemanggil lama (default $_POST) |
 | | | |
 
 ## Risiko / Blocker yang Diketahui

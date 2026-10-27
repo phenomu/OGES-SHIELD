@@ -65,6 +65,7 @@ $router->add('GET',  '/reports',          'ctrl:ReportController@index');
 $router->add('GET',  '/exploitation',     'exploitation');
 $router->add('GET',  '/persistence',      'persistence');
 $router->add('GET',  '/audit',            'audit');
+$router->add('GET',  '/audit/export',     'ctrl:AuditController@export');
 $router->add('GET',  '/settings',         'settings');
 $router->add('GET',  '/docs',             'docs');
 $router->add('POST', '/logout',           'ctrl:AuthController@logout');

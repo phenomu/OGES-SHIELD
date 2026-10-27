@@ -47,12 +47,16 @@ final class Session
         return $_SESSION['csrf'];
     }
 
-    /** Validasi token dari POST. false = tolak request. */
-    public static function checkCsrf(): bool
+    /**
+     * Validasi CSRF token. false = tolak request.
+     * Argumen opsional: token eksplisit (dari $_GET untuk link download,
+     * mis. export CSV) — default membaca $_POST['csrf'].
+     */
+    public static function checkCsrf(?string $explicitToken = null): bool
     {
-        $token = $_POST['csrf'] ?? '';
+        $token = $explicitToken ?? ($_POST['csrf'] ?? '');
         $known = $_SESSION['csrf'] ?? '';
-        return is_string($token) && is_string($known) && $known !== '' && hash_equals($known, $token);
+        return is_string($token) && is_string($known) && $known !== '' && $token !== '' && hash_equals($known, $token);
     }
 
     // ---- Flash message (sekali baca) ----
