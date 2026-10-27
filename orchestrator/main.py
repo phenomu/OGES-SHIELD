@@ -54,6 +54,28 @@ def _load_registry() -> None:
         print(f"[registry] GAGAL: {e}")
     for d in (settings.REPORTS_DIR, settings.EVIDENCE_DIR):
         d.mkdir(parents=True, exist_ok=True)
+    _recover_orphaned_runs()
+
+
+def _recover_orphaned_runs() -> None:
+    """Startup recovery: thread per-run mati bersama proses lama saat restart.
+    Run 'running'/'pending' yang bukan milik instance ini = zombie (thread-nya
+    sudah tidak ada) → tandai stopped supaya bisa di-delete / tidak nempel
+    'running' selamanya di UI. (Fix: tombol stop tidak berefek di zombie
+    karena flag stop hanya dibaca thread yang sudah mati.)"""
+    try:
+        n = db.execute(
+            "UPDATE workflow_runs SET status = 'stopped', finished_at = NOW() "
+            "WHERE status IN ('running','pending')",
+        )
+        if n and n > 0:
+            print(f"[recovery] {n} run zombie ditandai stopped (orphaned oleh restart)")
+            try:
+                audit(None, "run_stopped", {"by": "startup-recovery", "count": n})
+            except Exception:
+                pass  # audit gagal tidak boleh blokir recovery
+    except Exception as e:  # DB down dsb — jangan matikan service
+        print(f"[recovery] GAGAL: {e}")
 
 
 # ------------------------------------------------------------------ models --

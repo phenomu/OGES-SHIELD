@@ -21,6 +21,11 @@ cukup exclude /api/, aksi admin tetap POST full-load), notif badge hilang
 saat dropdown DIBUKA (fix logika kebal), grid-mid kolom kanan dilebarkan
 (1.7fr→1.45fr, workflows/docs tidak kepotong), grid-bottom margin-top
 pemisah antar grid bertumpuk.
+Fix zombie run: restart orchestrator membunuh thread per-run tanpa update
+status → run nempel 'running' selamanya & tombol stop tidak berefek (flag
+stop dibaca thread yang sudah mati). Recovery startup (_recover_orphaned_runs)
+tandai semua running/pending → stopped saat boot; awaiting_confirmation
+dibiarkan (punya Resume). E2E: 8 zombie dibersihkan, tombol Delete muncul.
 
 ---
 
