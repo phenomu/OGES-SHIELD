@@ -97,14 +97,34 @@ $router->add('GET',  '/api/findings',   'json:findings');
 
 // --- Guard server-side (Bagian 7: role check di server, bukan cuma UI) ---
 $path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH) ?: '/';
+
+// Normalisasi trailing slash + ekstensi .php SEBELUM guard.
+// Tanpa ini, '/admin/approvals/' tidak cocok dengan prefix '/admin/'? — justru
+// sebaliknya: '/status/' vs '/status' membuat daftar $publicPaths tidak match
+// ('/login/' dianggap butuh login) dan pengecekan role bisa meleset. Router
+// memakai normalisasi yang sama (Router::variants).
+$normPath = $path === '/' ? '/' : rtrim($path, '/');
+if ($normPath === '') {
+    $normPath = '/';
+}
+$normPath = preg_replace('/\.php$/', '', $normPath);
+if ($normPath === '') {
+    $normPath = '/';
+}
+
 $publicPaths = ['/', '/login', '/register', '/pending-approval', '/health'];
 
-if (!in_array($path, $publicPaths, true)) {
+if (!in_array($normPath, $publicPaths, true)) {
     Auth::requireLogin();
-    if (str_starts_with($path, '/admin/') && !Auth::isSuperadmin()) {
-        http_response_code(403);
-        View::page('403');
-        exit;
+    // Prefix dibatasi ke '/admin' atau '/admin/...' saja — jangan
+    // str_starts_with('/admin') polos, karena route masa depan seperti
+    // '/administrator' akan ikut terkunci superadmin.
+    if ($normPath === '/admin' || str_starts_with($normPath, '/admin/')) {
+        if (!Auth::isSuperadmin()) {
+            http_response_code(403);
+            View::page('403');
+            exit;
+        }
     }
 }
 
