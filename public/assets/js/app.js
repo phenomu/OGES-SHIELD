@@ -42,7 +42,12 @@
       if (!menu) return;
       btn.addEventListener("click", function (e) {
         e.stopPropagation();
-        var open = !menu.hidden;
+        var open = !menu.hidden; // true = menu lagi kebuka → klik ini akan menutup
+        // klik MEMBUKA notif → badge (angka merah) hilang: user sudah melihat
+        if (!open && btn.classList.contains("notif-btn")) {
+          var badge = btn.querySelector(".notif-badge");
+          if (badge) badge.remove();
+        }
         document.querySelectorAll(".dropdown-menu").forEach(function (m) { m.hidden = true; });
         document.querySelectorAll("[data-dropdown]").forEach(function (b) { b.setAttribute("aria-expanded", "false"); });
         if (!open) { menu.hidden = false; btn.setAttribute("aria-expanded", "true"); }
@@ -663,8 +668,10 @@
     if (!url || url.charAt(0) !== "/") return false;
     // halaman auth & endpoint khusus biarkan full load
     if (/^\/(login|logout|register|pending-approval)\b/.test(url)) return false;
-    if (/^\/(admin\/|api\/)/.test(url)) return false; // POST/download/admin biarkan normal
+    if (/^\/api\//.test(url)) return false; // endpoint internal
     if (/^\/(report\/download|audit\/export)/.test(url)) return false;
+    // halaman admin GET boleh SPA (tool-registry, approvals); aksi POST tetap full load
+    // karena semua aksi admin pakai form POST (bukan link).
     return true;
   }
   function spaSwap(url, push) {

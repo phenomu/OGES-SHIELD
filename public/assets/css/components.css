@@ -43,7 +43,7 @@
 }
 .grid-mid {
   display: grid;
-  grid-template-columns: 1.7fr 1fr;
+  grid-template-columns: 1.45fr 1fr; /* panel kanan lebih lebar (workflows/docs) */
   gap: var(--sp-3);
   margin-bottom: var(--sp-3);
 }
@@ -51,6 +51,7 @@
   display: grid;
   grid-template-columns: 1.7fr 1fr;
   gap: var(--sp-3);
+  margin-top: var(--sp-4); /* pemisah antar grid yang bertumpuk (dashboard 2x) */
 }
 
 /* ---------- Stat card ---------- */

@@ -16,6 +16,11 @@ panggil nuclei per host dengan template_tags SESUAI CMS (hunters.low.my.id
 Laravel → tags ["laravel"]). Template tool custom (tools/template.py) tersedia
 sebagai scaffold doc + tools.json registered (disabled). 🔵 Nice-to-have
 SELESAI (responsive + dekorasi cyberpunk) — PHASE 6 LENGKAP 🟢.
+Bugfix UX batch: SPA admin pages (tool-registry/approvals tanpa reload —
+cukup exclude /api/, aksi admin tetap POST full-load), notif badge hilang
+saat dropdown DIBUKA (fix logika kebal), grid-mid kolom kanan dilebarkan
+(1.7fr→1.45fr, workflows/docs tidak kepotong), grid-bottom margin-top
+pemisah antar grid bertumpuk.
 
 ---
 
