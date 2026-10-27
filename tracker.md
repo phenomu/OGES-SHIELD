@@ -10,6 +10,11 @@
 >   urutan prioritas (UI/UX dulu, backend belakangan) tetap dipegang.
 
 **Status project saat ini:** 🟢 Phase 6 SELESAI (must-have + nice-to-have semua).
+Bugfix coverage: AI dulunya bolak-balik scan 1 host (nuclei 6x hunters) —
+host live lain terlewat padahal subfinder nemu subdomain. Fix 3 lapis
+(coverage tracker di running summary + rule COVERAGE WAJIB di system
+prompt + ekstrak host dari args CLI exact-match). E2E 20f0c297: nuclei
+menyebar iot→hepha→weeb→mail, template_tags adaptif php/webmail.
 Rencana berikutnya (belum dikerjakan — antre setelah chat compress):
 (1) sparkline stat-card dashboard → data deret riil (findings/run per hari,
 12 titik, GROUP BY DATE), (2) timeline chart Operations Overview → port pola
