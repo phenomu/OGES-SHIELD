@@ -71,6 +71,15 @@ custom keluaran JSON → findings mapper (`orchestrator/findings.py`) → AI enr
 PDF. Tambah tool sendiri (mis. "wp2shell") dengan pola yang sama — lihat menu
 **Dokumentasi** di aplikasi (section 4 + 6).
 
+## Bikin tool custom sendiri
+
+Salin `orchestrator/tools/template.py` → isi logika di `run_check()`, daftarkan di
+`orchestrator/config/tools.json` (ganti id/valid_phases/deskripsi), tambah 1 baris
+di `runner.py` `_CUSTOM_TOOLS`, klik "Muat Ulang" di Tool Modules. Docstring
+template.py berisi anatomu lengkap + snippet JSON + kontrak output findings
+(`vulnerable` / `cves` / `exploit_path_valid`). Detail: menu Dokumentasi di
+aplikasi, section 6.
+
 ## Struktur
 
 ```

@@ -258,6 +258,36 @@
       "timeout_seconds": 300,
       "enabled": true,
       "description": "Deteksi CMS/framework TIAP host live (WordPress, Laravel, cPanel, webmail Roundcube, PHP version) + rekomendasi template nuclei per host. WAJIB jalan PERTAMA di service enumeration untuk semua host sekaligus sebelum vulnerability assessment — hasilnya menentukan tool/template apa yang relevan per subdomain (mis. host WordPress → nuclei template wordpress, cpanel.low.my.id → template cpanel, mail host → template webmail). Juga deteksi versi PHP < 8 → sarankan nuclei template php + php exploit tools."
+    },
+    {
+      "id": "custom_template",
+      "name": "TEMPLATE — kerangka tool custom (jangan dipakai AI)",
+      "category": "recon",
+      "valid_phases": [
+        "reconnaissance"
+      ],
+      "risk_level": "safe",
+      "command_template": "python3 {script_path} --url {target_url}",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "target_url": {
+            "type": "string"
+          },
+          "script_path": {
+            "type": "string",
+            "description": "(diisi orchestrator, bukan AI)"
+          }
+        },
+        "required": [
+          "target_url",
+          "script_path"
+        ]
+      },
+      "output_parser": "jsonlines",
+      "timeout_seconds": 60,
+      "enabled": false,
+      "description": "TEMPLATE REFERENSI — salin orchestrator/tools/template.py untuk bikin tool baru. Docstring file berisi anatomu lengkap: registrasi tools.json, valid_phases, risk_level, kontrak output findings (vulnerable/cves/exploit_path_valid). Tool ini disabled — tidak dipilih AI."
     }
   ]
 }

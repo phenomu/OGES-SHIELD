@@ -13,7 +13,9 @@
 exploit chain + CMS checker multi-host adaptif (cms_check + nuclei template_tags).
 Terbukti: run 29c66af2 (low.my.id, 8 subdomain) — cms_check 1× semua host, AI
 panggil nuclei per host dengan template_tags SESUAI CMS (hunters.low.my.id
-Laravel → tags ["laravel"]). Sisa 🔵 nice-to-have: responsive, dekorasi cyberpunk.
+Laravel → tags ["laravel"]). Template tool custom (tools/template.py) tersedia
+sebagai scaffold doc + tools.json registered (disabled). Sisa 🔵 nice-to-have:
+responsive, dekorasi cyberpunk.
 
 ---
 
@@ -393,6 +395,7 @@ memalukan di depan juri, dan guardrail keamanan dasar sudah dicek manual sekali.
 | 2026-10-27 | cms_check.py: CMS checker multi-host (WP/Laravel/cPanel/webmail + PHP ver + rekomendasi template nuclei per host); httpx_live_hosts.txt artefak | Request user: decision point sebelum nuclei, template sesuai CMS, semua subdomain ikut |
 | 2026-10-27 | nuclei + param template_tags (array, comma-join) — AI pilih tag sesuai hasil cms_check | Request user: "tidak mungkin CMS wordpress pakai template ojs" — AI diarahkan schema description |
 | 2026-10-27 | Runner: tipe array param valid; placeholder kosong → skip flag-nya (bug `-tags ""`/argv kosong); scope url match host:port | Bug live: nuclei KeyError template_tags; cms_check argv kosong; subfinder scope reject url target |
+| 2026-10-27 | orchestrator/tools/template.py = scaffold tool custom (anatomi 3 bagian + snippet JSON + kontrak output) + tools.json entry custom_template disabled | Request user: panduan konkrit bikin tool custom — salin template, isi run_check, registrasi, reload |
 | | | |
 
 ## Risiko / Blocker yang Diketahui
