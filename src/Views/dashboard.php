@@ -1,6 +1,8 @@
 <?php
 /**
- * dashboard.php — Overview (Bagian 4.3 – 4.9). Semua data dummy Phase 1.
+ * dashboard.php — Overview (Bagian 4.3 – 4.9). Semua data asli: stats,
+ * sparkline deret per hari, timeline event tool run terbaru, terminal
+ * live feed, findings/audit dari DB (dummy Phase 1 sudah dipensiunkan).
  */
 View::$pageTitle = 'Overview — OGES-SHIELD';
 $navKey = $_GET['nav'] ?? 'overview';
