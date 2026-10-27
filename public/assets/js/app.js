@@ -236,8 +236,8 @@
   function stepperUpdate(e) {
     var steps = document.querySelectorAll(".stepper .step[data-phase]");
     if (!steps.length) return;
-    var ts = e.created_at ? new Date(e.created_at + "Z").getTime() : Date.now();
-    if (isNaN(ts)) ts = Date.now();
+    var ts = e.created_at ? new Date(e.created_at + "Z").getTime() : NaN;
+    if (isNaN(ts) || Math.abs(ts - Date.now()) > 86400000) ts = Date.now(); // toleransi 1 hari (TZ mismatch)
     if (e.type === "phase_started") {
       phaseStartTs[e.phase] = ts;
       var idx = -1;
@@ -295,12 +295,17 @@
       currentTool: "--",
       startTs: null,
       timerEl: document.querySelector("[data-elapsed]"),
+      finalSecs: NaN,
     };
+    if (runMeta.timerEl) {
+      var fs = parseInt(runMeta.timerEl.dataset.elapsedFinal || "", 10);
+      if (!isNaN(fs)) runMeta.finalSecs = fs;
+    }
   }
   function opsMetaUpdate(e) {
     if (!runMeta) return;
-    var ts = e.created_at ? new Date(e.created_at + "Z").getTime() : Date.now();
-    if (isNaN(ts)) ts = Date.now();
+    var ts = e.created_at ? new Date(e.created_at + "Z").getTime() : NaN;
+    if (isNaN(ts) || Math.abs(ts - Date.now()) > 86400000) ts = Date.now(); // toleransi 1 hari (TZ mismatch)
     if (e.type === "run_started") runMeta.startTs = ts;
     if (e.type === "phase_complete") runMeta.phasesDone++;
     if (e.type === "tool_started") { runMeta.toolTotal++; runMeta.currentTool = (e.payload || {}).tool || runMeta.currentTool; }
@@ -319,16 +324,39 @@
     if (td) td.textContent = runMeta.toolDone + " / " + runMeta.toolTotal;
   }
   var elapsedTimer = null;
+  function fmtElapsedSecs(s) {
+    var h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), ss = s % 60;
+    return (h > 0 ? h + "h " : "") + m + "m " + String(ss).padStart(2, "0") + "s";
+  }
   function startElapsed() {
     if (elapsedTimer || !runMeta || !runMeta.startTs || !runMeta.timerEl) return;
+    // run sudah selesai saat halaman dibuka → elapsed final dari server, timer mati
+    if (!isNaN(runMeta.finalSecs)) {
+      runMeta.timerEl.textContent = fmtElapsedSecs(runMeta.finalSecs);
+      return;
+    }
     var el = runMeta.timerEl;
+    // lanjutkan dari nilai server-render (bukan mulai 0)
+    var baseSecs = Math.max(0, Math.floor((Date.now() - runMeta.startTs) / 1000));
     elapsedTimer = setInterval(function () {
       var s = Math.max(0, Math.floor((Date.now() - runMeta.startTs) / 1000));
-      var h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), ss = s % 60;
-      el.textContent = (h > 0 ? h + "h " : "") + m + "m " + String(ss).padStart(2, "0") + "s";
+      if (s < baseSecs) s = baseSecs;
+      el.textContent = fmtElapsedSecs(s);
     }, 1000);
   }
-  function stopElapsed() { if (elapsedTimer) { clearInterval(elapsedTimer); elapsedTimer = null; } }
+  function stopElapsed() {
+    if (elapsedTimer) { clearInterval(elapsedTimer); elapsedTimer = null; }
+    // bekukan nilai final saat run berakhir (bukan 0m 00s)
+    if (runMeta && runMeta.timerEl) {
+      var s = NaN;
+      if (!isNaN(runMeta.finalSecs)) {
+        s = runMeta.finalSecs;
+      } else if (runMeta.startTs) {
+        s = Math.max(0, Math.floor((Date.now() - runMeta.startTs) / 1000));
+      }
+      if (!isNaN(s)) runMeta.timerEl.textContent = fmtElapsedSecs(s);
+    }
+  }
   /* badge status di halaman run */
   function statusBadgeUpdate(e) {
     var badge = document.querySelector(".page-head .sev");
@@ -339,6 +367,61 @@
                 run_failed: ["FAILED", "sev-critical"] };
     var m = map[e.type];
     if (m) { badge.textContent = m[0]; badge.className = "sev " + m[1]; }
+    runActionsUpdate(e.type);
+  }
+
+  /* tombol aksi run (Stop/Delete/Report/Resume) update live tanpa reload */
+  function runActionsUpdate(eventType) {
+    var wrap = document.querySelector("[data-run-actions]");
+    if (!wrap) return;
+    var status = wrap.dataset.runStatus;
+    var transitions = {
+      run_completed: "completed", run_stopped: "stopped", run_failed: "failed",
+      confirmation_required: "awaiting_confirmation",
+      run_resumed: "running",
+    };
+    if (transitions[eventType]) status = transitions[eventType];
+    wrap.dataset.runStatus = status;
+
+    var csrf = wrap.dataset.csrf || "";
+    var runId = wrap.dataset.runId || "";
+    // hapus tombol stop/resume lama
+    wrap.querySelectorAll('form[action="/runs/stop"], form[action="/runs/resume"]').forEach(function (f) { f.remove(); });
+    var delBtn = wrap.querySelector('form[action="/runs/delete"]');
+    var rptLink = wrap.querySelector('a[href*="report/download"]');
+
+    if (status === "completed" || status === "stopped" || status === "failed") {
+      // Stop hilang, Delete muncul
+      if (!delBtn) {
+        var f = document.createElement("form");
+        f.method = "post"; f.action = "/runs/delete";
+        f.setAttribute("data-confirm", "Hapus run ini? Semua event, findings, dan report milik run ikut terhapus. Tidak bisa dibatalkan.");
+        f.innerHTML = '<input type="hidden" name="csrf" value="' + esc(csrf) + '">' +
+                      '<input type="hidden" name="run_id" value="' + esc(runId) + '">' +
+                      '<button type="submit" class="btn btn-danger">Delete Run</button>';
+        wrap.appendChild(f);
+        f.addEventListener("submit", function (e) {
+          if (!window.confirm(f.dataset.confirm)) e.preventDefault();
+        });
+      }
+    } else if (status === "awaiting_confirmation") {
+      if (!wrap.querySelector('form[action="/runs/resume"]')) {
+        var fr = document.createElement("form");
+        fr.method = "post"; fr.action = "/runs/resume";
+        fr.innerHTML = '<input type="hidden" name="csrf" value="' + esc(csrf) + '">' +
+                       '<input type="hidden" name="run_id" value="' + esc(runId) + '">' +
+                       '<button type="submit" class="btn btn-primary">Resume</button>';
+        wrap.insertBefore(fr, wrap.querySelector('a[href*="report/download"]') || null);
+      }
+    }
+    if (status === "completed" && !rptLink) {
+      var a = document.createElement("a");
+      a.className = "btn";
+      a.href = "/report/download?id=" + encodeURIComponent(runId);
+      a.title = "Download report.pdf";
+      a.textContent = "\u2b07 Report PDF";
+      wrap.appendChild(a);
+    }
   }
   function initRunStream() {
     document.querySelectorAll(".terminal[data-run-id]").forEach(function (term) {
@@ -488,11 +571,13 @@
   /* ---------- Simulated elapsed timer (dummy run aktif) ---------- */
   function initElapsedTimers() {
     document.querySelectorAll("[data-elapsed]").forEach(function (el) {
+      // elemen run selesai punya elapsedFinal — nilainya frozen (jangan di-timer)
+      var fs = parseInt(el.dataset.elapsedFinal || "", 10);
+      if (!isNaN(fs)) { el.textContent = fmtElapsedSecs(fs); return; }
       var secs = parseInt(el.dataset.elapsed || "0", 10);
       setInterval(function () {
         secs++;
-        var h = Math.floor(secs / 3600), m = Math.floor((secs % 3600) / 60), s = secs % 60;
-        el.textContent = (h > 0 ? h + "h " : "") + m + "m " + String(s).padStart(2, "0") + "s";
+        el.textContent = fmtElapsedSecs(secs);
       }, 1000);
     });
   }
@@ -543,6 +628,68 @@
     setInterval(tick, 3000);
   }
 
+  /* ---------- SPA navigation (anti full-reload antar menu) ---------- */
+  function spaNavigable(url) {
+    if (!url || url.charAt(0) !== "/") return false;
+    // halaman auth & endpoint khusus biarkan full load
+    if (/^\/(login|logout|register|pending-approval)\b/.test(url)) return false;
+    if (/^\/(admin\/|api\/)/.test(url)) return false; // POST/download/admin biarkan normal
+    if (/^\/(report\/download|audit\/export)/.test(url)) return false;
+    return true;
+  }
+  function spaSwap(url, push) {
+    var main = document.getElementById("main-content");
+    if (!main) return false;
+    // skeleton loading state (PROMPT 4.11: bukan layar putih)
+    main.style.opacity = "0.45";
+    fetch(url, { headers: { "X-Requested-With": "oges-spa" }, credentials: "same-origin" })
+      .then(function (r) {
+        if (!r.ok) throw new Error(r.status);
+        if (r.redirected && /login/.test(r.url)) { window.location = r.url; return null; }
+        return r.text();
+      })
+      .then(function (html) {
+        if (!html) return;
+        // parse dokumen penuh, ambil konten main + title
+        var doc = new DOMParser().parseFromString(html, "text/html");
+        var newMain = doc.getElementById("main-content");
+        if (!newMain) { window.location = url; return; }
+        main.replaceWith(newMain);
+        if (push !== false) history.pushState({ ogesSpa: true, url: url }, "", url);
+        document.title = doc.title || document.title;
+        // re-init semua komponen JS di konten baru
+        boot();
+        // sidebar active state ikut halaman baru
+        var key = doc.querySelector(".sidebar .nav-item.active");
+        document.querySelectorAll(".sidebar .nav-item").forEach(function (a) {
+          a.classList.toggle("active", key ? a.getAttribute("data-nav") === key.getAttribute("data-nav") : a.getAttribute("href") === url);
+        });
+        newMain.style.opacity = "";
+        // scroll ke atas konten
+        window.scrollTo(0, 0);
+        main = null;
+      })
+      .catch(function () { window.location = url; }); // fallback full load
+    return true;
+  }
+  function initSpaNav() {
+    document.addEventListener("click", function (e) {
+      var a = e.target.closest ? e.target.closest("a") : null;
+      if (!a || a.target || a.hasAttribute("download") || a.protocol.indexOf("http") === 0 && a.host !== window.location.host) return;
+      var href = a.getAttribute("href");
+      if (!href || href.charAt(0) === "#" || href.indexOf("javascript:") === 0) return;
+      // link dalam konten hasil swap (report download dll) biarkan default
+      if (/report\/download|audit\/export|^\/logout/.test(href)) return;
+      if (!spaNavigable(href)) return;
+      e.preventDefault();
+      spaSwap(href, true);
+    });
+    window.addEventListener("popstate", function (e) {
+      if (e.state && e.state.ogesSpa) spaSwap(e.state.url, false);
+      else if (location.pathname !== "/login") spaSwap(location.pathname + location.search, false);
+    });
+  }
+
   /* ---------- Boot ---------- */
   function boot() {
     initTabs(document);
@@ -554,9 +701,13 @@
     if (window.Chart) { initSparklines(); initDonut(); initTimeline(); }
     initElapsedTimers();
   }
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", boot);
-  } else {
+  function bootOnce() {
     boot();
+    initSpaNav();
+  }
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", bootOnce);
+  } else {
+    bootOnce();
   }
 })();

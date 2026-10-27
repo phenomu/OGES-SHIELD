@@ -40,7 +40,7 @@ $labelFor = fn(string $p) => match ($p) {
     <h1 class="page-title">Live Run</h1>
     <p class="page-sub mono"><?= e($runId) ?></p>
   </div>
-  <div style="display:flex; gap: var(--sp-2); align-items:center">
+  <div style="display:flex; gap: var(--sp-2); align-items:center" data-run-actions data-run-id="<?= e($runId) ?>" data-run-status="<?= e((string) $run['status']) ?>" data-csrf="<?= e(Session::csrf()) ?>">
     <?= $statusBadge((string) $run['status']) ?>
     <?php if ($run['status'] === 'awaiting_confirmation'): ?>
       <form method="post" action="/runs/resume">
@@ -103,7 +103,13 @@ $labelFor = fn(string $p) => match ($p) {
     </div>
     <div class="ops-meta-item">
       <span class="ops-meta-label">ELAPSED TIME</span>
-      <span class="ops-meta-value" data-elapsed="0">0m 00s</span>
+      <?php
+      // elapsed awal dari DB — run selesai dipakai durasi final, tidak jalan lagi
+      $elStart = $run['started_at'] ?: $run['created_at'];
+      $elEnd = $run['finished_at'] ?: null;
+      $elSecs = $elStart ? max(0, strtotime($elEnd ?: 'now') - strtotime($elStart)) : 0;
+      ?>
+      <span class="ops-meta-value" data-elapsed="0" data-elapsed-final="<?= $elEnd ? (int) $elSecs : '' ?>"><?= e(intdiv($elSecs, 3600) > 0 ? intdiv($elSecs, 3600) . 'h ' : '' . '') ?><?= intdiv($elSecs % 3600, 60) ?>m <?= str_pad((string) ($elSecs % 60), 2, '0', STR_PAD_LEFT) ?>s</span>
     </div>
     <div class="ops-meta-item">
       <span class="ops-meta-label">COMPLETED TASKS</span>

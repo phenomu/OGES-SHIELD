@@ -9,11 +9,9 @@
 > - Target total: **10–14 hari kerja**. Estimasi hari per phase adalah PANDUAN, boleh geser asal
 >   urutan prioritas (UI/UX dulu, backend belakangan) tetap dipegang.
 
-**Status project saat ini:** 🟢 Phase 6 paruh akhir — sisa 🔵 nice-to-have (responsive,
-dekorasi cyberpunk). Semua 🟣 selesai: audit log page fungsional (+ export CSV),
-error-handling tool gagal teruji live, DEMO.md walkthrough, E2E akun baru penuh.
-Lampiran batch: engagement selector, template custom (modal visual + preview
-pipeline), data asli 4 halaman, timeline recon, docs 8 section.
+**Status project saat ini:** 🟢 Phase 6 paruh akhir — SPA navigation + fix run page
+live (elapsed frozen, tombol Delete/Report muncul tanpa refresh) selesai.
+Sisa 🔵 nice-to-have: responsive layar kecil, dekorasi cyberpunk.
 
 ---
 
@@ -349,7 +347,15 @@ kalau ada).
       run_failed / run_stopped) + badge count + link ke halaman run. Ditambah user
       dropdown (Settings/Dokumentasi/Logout) + topbar data asli (engagement run
       terbaru, workers/queue live).
-  - [ ] 🔵 Responsive untuk layar lebih kecil
+  - [ ] 🔵 Responsive untuk layar lebih kecil (dikerjakan)
+      Catatan: SPA navigation (anti reload antar menu) sudah jalan — klik sidebar
+      swap konten via fetch + DOMParser + pushState, komponen JS re-init,
+      loading opacity state, fallback full-load kalau fetch gagal, link
+      download/logout/admin tetap navigasi normal. Fix run page live: elapsed
+      final frozen dari server (data-elapsed-final, initElapsedTimers skip),
+      tombol Delete/Report/Resume muncul-hilang live via runActionsUpdate
+      (tanpa reload). E2E: run afd63142 pending→completed → Delete+Report
+      muncul otomatis.
 - [ ] 🔵 Dekorasi cyberpunk tambahan (city skyline, aksara dekoratif) ala referensi — murni kosmetik,
       kerjakan hanya kalau semua 🟣 di atas sudah beres
 - [ ] ⚪ Email notification approval (cut kalau waktu tidak cukup)
@@ -375,6 +381,9 @@ memalukan di depan juri, dan guardrail keamanan dasar sudah dicek manual sekali.
 | 2026-10-27 | Audit page: user biasa hanya lihat jejaknya sendiri; superadmin semua | Privacy antar user; audit superadmin ditandai ★ |
 | 2026-10-27 | Export CSV pakai CSRF via query string (link `<a>` bukan form POST) | Link download tak bisa bawa POST; token tetap terikat session, salah token = 403 |
 | 2026-10-27 | `Session::checkCsrf()` kini terima argumen token opsional | Mendukung validasi token dari $_GET (export) tanpa merusak pemanggil lama (default $_POST) |
+| 2026-10-27 | SPA nav: exclude `/login /register /admin/* /api/* download/export` — halaman lain swap tanpa reload | Form POST + download butuh full navigation; auth page perlu reload CSS/JS bersih |
+| 2026-10-27 | Elapsed run selesai = frozen server-side (`data-elapsed-final` = finished-started) | Bug: initElapsedTimers + replay event stream menimpa nilai jadi timer jalan terus di run completed |
+| 2026-10-27 | Tombol run actions (Stop/Delete/Report/Resume) dirender JS live dari event stream | Bug user: setelah completed harus refresh untuk lihat Delete/Report — sekarang muncul otomatis |
 | | | |
 
 ## Risiko / Blocker yang Diketahui
