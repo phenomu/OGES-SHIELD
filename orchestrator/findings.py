@@ -114,6 +114,88 @@ def _map_sqli_probe(result: dict) -> list[dict]:
     return out
 
 
+def _map_wp_check(rec: dict) -> list[dict]:
+    """Output wp_check.py → findings dari daftar CVE yang match versi WP terdeteksi."""
+    out: list[dict] = []
+    if not rec.get("is_wordpress"):
+        return out
+    target = str(rec.get("target") or "")
+    ver = str(rec.get("wp_version") or "?")
+    out.append({
+        "severity": "info",
+        "title": f"WordPress {ver} terdeteksi ({target})",
+        "cvss_score": None, "cwe": None, "cve": None,
+        "summary": (
+            f"WordPress versi {ver} terdeteksi"
+            + (f", theme '{rec.get('theme')}'" if rec.get("theme") else "")
+            + f". Sumber deteksi: {', '.join(rec.get('notes') or [])[:200]}."
+        ),
+        "impact": "", "remediation": "Update WordPress core ke versi terbaru.",
+        "references": ["https://wordpress.org/documentation/asy-updating/"],
+        "source_tool": "custom_wp_check",
+    })
+    for c in rec.get("cves") or []:
+        out.append({
+            "severity": _norm_sev(c.get("sev")),
+            "title": f"{c.get('title')} — WordPress {ver} ({target})",
+            "cvss_score": None, "cwe": None, "cve": c.get("cve"),
+            "summary": f"{c.get('desc')} Versi terdeteksi: {ver}.",
+            "impact": "", "remediation": "Update WordPress core ke versi patched.",
+            "references": [f"https://nvd.nist.gov/vuln/detail/{c.get('cve')}"],
+            "source_tool": "custom_wp_check",
+        })
+    return out
+
+
+def _map_php_check(rec: dict) -> list[dict]:
+    """Output php_check.py → findings dari daftar CVE yang match versi PHP terdeteksi."""
+    out: list[dict] = []
+    if not rec.get("is_php"):
+        return out
+    target = str(rec.get("target") or "")
+    ver = str(rec.get("php_version") or "?")
+    out.append({
+        "severity": "info",
+        "title": f"PHP {ver} terdeteksi ({target})",
+        "cvss_score": None, "cwe": None, "cve": None,
+        "summary": f"Versi PHP {ver} terdeteksi dari header X-Powered-By. Server: {rec.get('server') or '?'}.",
+        "impact": "", "remediation": "Sembunyikan X-Powered-By + update PHP ke versi terbaru.",
+        "references": ["https://www.php.net/releases/"],
+        "source_tool": "custom_php_check",
+    })
+    for c in rec.get("cves") or []:
+        out.append({
+            "severity": _norm_sev(c.get("sev")),
+            "title": f"{c.get('title')} — PHP {ver} ({target})",
+            "cvss_score": None, "cwe": None, "cve": c.get("cve"),
+            "summary": f"{c.get('desc')} Versi terdeteksi: {ver}.",
+            "impact": "", "remediation": "Update PHP ke versi patched / patch CVE terkait.",
+            "references": [f"https://nvd.nist.gov/vuln/detail/{c.get('cve')}"],
+            "source_tool": "custom_php_check",
+        })
+    return out
+
+
+def _map_php2shell(rec: dict) -> list[dict]:
+    """Output php2shell.py → finding kalau exploit path POC valid (benign reachability)."""
+    out: list[dict] = []
+    if not rec.get("exploit_path_valid"):
+        return out
+    return [{
+        "severity": "critical",
+        "title": f"Exploit path valid: {rec.get('poc_name')} ({rec.get('target')})",
+        "cvss_score": None, "cwe": None, "cve": rec.get("cve"),
+        "summary": (
+            f"Validasi POC benign menunjukkan exploit path terjangkau. "
+            f"Evidence: {rec.get('evidence')}. {rec.get('poc_note')}"
+        ),
+        "impact": "Path exploit dapat dijangkau — potensi RCE kalau payload nyata dipakai (tidak dieksekusi di platform ini).",
+        "remediation": "Patch CVE terkait + batasi akses path/endpoint tersebut.",
+        "references": [f"https://nvd.nist.gov/vuln/detail/{rec.get('cve')}"] if rec.get("cve") else [],
+        "source_tool": "custom_php2shell",
+    }]
+
+
 # -------------------------------------------------------------- insertion ----
 
 def map_tool_result(run_id: str, tool_id: str, result: dict) -> list[int]:
@@ -133,6 +215,18 @@ def map_tool_result(run_id: str, tool_id: str, result: dict) -> list[int]:
         for rec in records:
             if isinstance(rec, dict) and "vulnerable" in rec:
                 rows.extend(_map_sqli_probe(rec))
+    elif tool_id == "custom_wp_check":
+        for rec in records:
+            if isinstance(rec, dict):
+                rows.extend(_map_wp_check(rec))
+    elif tool_id == "custom_php_check":
+        for rec in records:
+            if isinstance(rec, dict):
+                rows.extend(_map_php_check(rec))
+    elif tool_id == "custom_php2shell":
+        for rec in records:
+            if isinstance(rec, dict):
+                rows.extend(_map_php2shell(rec))
     else:
         # tool lain (recon) tidak menghasilkan vulnerability finding
         return []

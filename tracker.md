@@ -10,8 +10,9 @@
 >   urutan prioritas (UI/UX dulu, backend belakangan) tetap dipegang.
 
 **Status project saat ini:** 🟢 Phase 6 paruh akhir — SPA navigation + fix run page
-live (elapsed frozen, tombol Delete/Report muncul tanpa refresh) selesai.
-Sisa 🔵 nice-to-have: responsive layar kecil, dekorasi cyberpunk.
+live + 3 tool custom exploit chain (wp_check/php_check/php2shell) + demo chain
+otonom terbukti (run b4776e1e: httpx→wp/php check→6 findings→php2shell
+CRITICAL→report.pdf). Sisa 🔵 nice-to-have: responsive, dekorasi cyberpunk.
 
 ---
 
@@ -384,6 +385,10 @@ memalukan di depan juri, dan guardrail keamanan dasar sudah dicek manual sekali.
 | 2026-10-27 | SPA nav: exclude `/login /register /admin/* /api/* download/export` — halaman lain swap tanpa reload | Form POST + download butuh full navigation; auth page perlu reload CSS/JS bersih |
 | 2026-10-27 | Elapsed run selesai = frozen server-side (`data-elapsed-final` = finished-started) | Bug: initElapsedTimers + replay event stream menimpa nilai jadi timer jalan terus di run completed |
 | 2026-10-27 | Tombol run actions (Stop/Delete/Report/Resume) dirender JS live dari event stream | Bug user: setelah completed harus refresh untuk lihat Delete/Report — sekarang muncul otomatis |
+| 2026-10-27 | `script_path` dihapus dari schema yang dilihat AI (`_schema_for_ai`); inject di runner override SELALUS | Bug: AI mengarang path `/opt/...` untuk script_path wajib → tool_failed. Guardrail 9.2: AI tak boleh isi path |
+| 2026-10-27 | 3 tool custom exploit chain: wp_check (WP ver + CVE offline), php_check (PHP ver + CVE), php2shell (POC benign reachability) | Request user: chain fully-automated recon→enum→WP/PHP detect→exploit→report. Terbukti run b4776e1e autonomous 6 findings + CRITICAL |
+| 2026-10-27 | `inject_script_paths` pindah ke tools/runner.py (mapping _CUSTOM_TOOLS) | Circular import: ai.loop ↔ tools.runner bila mapping di loop |
+| 2026-10-27 | Target demo mock: scripts/mock_wp_server.py (WP 5.6.40 + PHP 5.6.40, port 8899) | Butuh target in-scope terkontrol dengan CVE match nyata utk demo chain tanpa scan publik |
 | | | |
 
 ## Risiko / Blocker yang Diketahui

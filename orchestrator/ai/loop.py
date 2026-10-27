@@ -38,6 +38,18 @@ class LoopStopped(Exception):
 
 # ---------------------------------------------------------------- helpers ----
 
+def _schema_for_ai(schema: dict) -> dict:
+    """Salinan schema tanpa param internal orchestrator (script_path) — AI tidak
+    boleh mengisi path file sendiri (guardrail 9.2)."""
+    out = {k: v for k, v in schema.items() if k not in ("required", "properties")}
+    props = {k: v for k, v in (schema.get("properties") or {}).items() if k != "script_path"}
+    out["properties"] = props
+    req = [r for r in (schema.get("required") or []) if r != "script_path"]
+    if req:
+        out["required"] = req
+    return out
+
+
 def _tools_param(phase: str, exclude: set[str] | None = None) -> list[dict]:
     """OpenAI function schema, diturunkan otomatis dari tools.json (guardrail 9.2:
     AI hanya melihat schema — tidak pernah melihat command template).
@@ -51,7 +63,7 @@ def _tools_param(phase: str, exclude: set[str] | None = None) -> list[dict]:
             "function": {
                 "name": t["id"],
                 "description": f"{t['name']} — {t.get('description', '')}",
-                "parameters": t["input_schema"],
+                "parameters": _schema_for_ai(t["input_schema"]),
             },
         })
     return out
@@ -178,13 +190,10 @@ def _artifacts_hint(run_id: str) -> str:
 
 
 def _inject_script_paths(tool_id: str, params: dict) -> dict:
-    """Tool python custom: script_path diisi orchestrator (bukan AI)."""
-    if tool_id == "custom_sqli_probe" and "script_path" not in params:
-        params = dict(params)
-        params["script_path"] = str(
-            settings.EVIDENCE_DIR.parent.parent / "orchestrator" / "tools" / "sqli_probe.py"
-        )
-    return params
+    """Tool python custom: script_path diisi orchestrator (bukan AI).
+    Delegasi ke tools.runner (mapping _CUSTOM_TOOLS ada di sana — hindari circular import)."""
+    from tools.runner import inject_script_paths
+    return inject_script_paths(tool_id, params)
 
 
 # ------------------------------------------------------------------- loop ----

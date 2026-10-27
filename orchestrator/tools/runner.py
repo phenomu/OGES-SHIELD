@@ -233,6 +233,25 @@ def _parse_output(parser: str, stdout: str) -> list[dict]:
     return records
 
 
+_CUSTOM_TOOLS: dict[str, str] = {
+    # tool_id → file tool python custom (script_path diisi orchestrator, bukan AI)
+    "custom_sqli_probe": "sqli_probe.py",
+    "custom_wp_check": "wp_check.py",
+    "custom_php_check": "php_check.py",
+    "custom_php2shell": "php2shell.py",
+}
+
+
+def inject_script_paths(tool_id: str, params: dict) -> dict:
+    """Tool python custom: script_path absolut diisi orchestrator (bukan AI/caller).
+    Nilai script_path dari AI/caller SELALU dibuang (guardrail 9.2 — path injection)."""
+    fname = _CUSTOM_TOOLS.get(tool_id)
+    if fname:
+        params = dict(params)
+        params["script_path"] = str(Path(__file__).resolve().parent / fname)
+    return params
+
+
 def run_tool(run_id: str, tool_id: str, params: dict, user_id: int | None = None,
              phase: str = "manual") -> dict:
     """Eksekusi 1 tool utk run. Return ringkasan hasil (dict) — caller menulis event."""
@@ -241,6 +260,9 @@ def run_tool(run_id: str, tool_id: str, params: dict, user_id: int | None = None
         raise ToolRegistryError(f"tool '{tool_id}' tidak terdaftar")
     if not tool.get("enabled"):
         raise ToolValidationError(f"tool '{tool_id}' disabled")
+
+    # script_path utk tool python custom diisi orchestrator (bukan AI/caller)
+    params = inject_script_paths(tool_id, dict(params))
 
     clean = validate_params(tool, params)
     target = assert_scope(run_id, tool, clean)  # guardrail 9.1

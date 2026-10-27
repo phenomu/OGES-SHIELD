@@ -190,8 +190,13 @@ $AR = '→';
       </div>
       <div class="ailog-entry"><span class="ailog-time">03</span>
         <div class="ailog-body"><span class="ailog-tag ai_decision">CONTOH: TOOL PERSISTENCE</span>
-          <p class="ailog-text">Bikin file <span class="mono">orchestrator/tools/persistence_check.py</span> (output JSON per baris ke stdout, payload benign). Lalu di Raw JSON tambah: <span class="mono">"id": "custom_persistence_check"</span>, <span class="mono">"valid_phases": ["persistence_simulation"]</span>, <span class="mono">"command_template": "python3 {script_path}"</span>, schema parameter, dsb. Setelah itu: phase persistence di template custom kamu langsung hidup — AI akan memilih tool ini saat run sampai phase itu.</p>
+          <p class="ailog-text">Pola: bikin file di <span class="mono">orchestrator/tools/</span> (baca param dari arg CLI, output JSON per baris ke stdout, payload benign), lalu daftarkan di Raw JSON (contoh lengkap: <span class="mono">wp_check.py</span> deteksi versi WordPress + match CVE offline, <span class="mono">php_check.py</span> deteksi versi PHP + CVE, <span class="mono">php2shell.py</span> validasi exploit POC benign). Untuk persistence: <span class="mono">"id": "custom_persistence_check"</span>, <span class="mono">"valid_phases": ["persistence_simulation"]</span>, <span class="mono">"command_template": "python3 {script_path} --url {target_url}"</span>, dst. Field <span class="mono">script_path</span> diisi OTOMATIS orchestrator (AI tidak melihat field itu). Tool dengan output <span class="mono">vulnerable:true</span> / <span class="mono">exploit_path_valid:true</span> / daftar <span class="mono">cves</span> otomatis jadi findings (mapper di <span class="mono">orchestrator/findings.py</span>).</p>
+              <div class="ailog-entry"><span class="ailog-time">03b</span>
+        <div class="ailog-body"><span class="ailog-tag ai_decision">CONTOH: CHAIN EXPLOIT OTOMATIS</span>
+          <p class="ailog-text">Contoh nyata yang sudah teruji di platform (target demo mock WP di <span class="mono">127.0.0.1:8899</span>): <b>recon</b> (httpx deteksi tech) → <b>service enum</b> (AI pilih <span class="mono">wp_check</span> + <span class="mono">php_check</span> karena tech WordPress/PHP) → <b>findings otomatis</b> (versi WP 5.6.40 + PHP 5.6.40 + daftar CVE match) → <b>exploitation</b> (AI pilih <span class="mono">php2shell</span> validasi POC benign → finding CRITICAL "exploit path valid") → <b>report.pdf</b>. AI memutuskan tool berikutnya dari hasil tool sebelumnya — full autonomous, tanpa campur tangan. Ganti/daftarkan tool sembarang (mis. "wp2shell") dengan pola yang sama: file tool + Raw JSON.</p>
         </div>
+      </div>
+</div>
       </div>
       <div class="ailog-entry"><span class="ailog-time">04</span>
         <div class="ailog-body"><span class="ailog-tag ai_decision">GUARDRAIL</span>

@@ -50,14 +50,31 @@ cp .env.example .env              # edit: DB + AI_ROUTER_API_KEY (key 9router-mu
 bash scripts/setup.sh    # install subfinder, httpx, nuclei, naabu ke bin/
 ```
 
+## Demo chain exploit otomatis (contoh teruji)
+
+```
+httpx (tech-detect: WordPress + PHP)
+  → AI pilih wp_check      → versi WordPress 5.6.40 + CVE match → findings
+  → AI pilih php_check     → versi PHP 5.6.40 + CVE match      → findings
+  → AI pilih nuclei        → vuln scan template
+  → AI pilih php2shell     → POC benign valid → finding CRITICAL "exploit path valid"
+  → report.pdf otomatis
+```
+
+Target demo: mock WordPress + PHP vulnerable (`scripts/mock_wp_server.py`, jalankan
+lokal lalu daftarkan `http://127.0.0.1:8899/` sebagai target in-scope). Semua tool
+custom keluaran JSON → findings mapper (`orchestrator/findings.py`) → AI enrich →
+PDF. Tambah tool sendiri (mis. "wp2shell") dengan pola yang sama — lihat menu
+**Dokumentasi** di aplikasi (section 4 + 6).
+
 ## Struktur
 
 ```
 public/          DocumentRoot PHP (index.php front controller)
 src/             kode PHP non-publik (Core, Models, Controllers, Views)
-orchestrator/    Python FastAPI — AI brain + tool runner
+orchestrator/    Python FastAPI — AI brain + tool runner (+ tools/ custom Python)
 database/        schema.sql
-scripts/         setup.sh (install tools Go)
+scripts/         setup.sh (install tools Go), mock_wp_server.py (target demo)
 bin/             binari Go (gitignored)
 storage/         reports + bukti tool output (gitignored)
 ```
