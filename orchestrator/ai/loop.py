@@ -110,6 +110,31 @@ def _system_prompt(phase: str, target: dict, template_name: str, run_id: str) ->
     )
 
 
+def _tool_sig(tool_id: str, params: dict) -> str:
+    """Signature pemanggilan tool (utk dedup hard): tool + param dinormalisasi.
+    Host dinormalisasi (strip scheme/port/slash) supaya 'https://x' == 'x'.
+    List tags di-sort supaya ['a','b'] == ['b','a']."""
+    import hashlib
+
+    def _norm_val(v):
+        if isinstance(v, str):
+            v = v.strip()
+            for pre in ("http://", "https://"):
+                if v.startswith(pre):
+                    v = v[len(pre):]
+            return v.split("/")[0].split(":")[0].lower()
+        if isinstance(v, list):
+            return sorted(_norm_val(x) for x in v)
+        return v
+
+    try:
+        norm_params = {k: _norm_val(v) for k, v in (params or {}).items()}
+        norm = json.dumps(norm_params, sort_keys=True, ensure_ascii=False)
+    except (TypeError, ValueError):
+        norm = str(sorted((params or {}).items(), key=lambda x: str(x[0])))
+    return f"{tool_id}|{hashlib.sha1(norm.encode('utf-8')).hexdigest()}"
+
+
 def _running_summary(run_id: str) -> str:
     """Ringkasan hasil sejauh ini (bukan raw log — jaga context kecil)."""
     rows = db.query(
@@ -415,6 +440,7 @@ def _run_phase(run_id: str, phase: str, target: dict, template_name: str) -> Non
     tool_calls = 0
     consecutive_scope_violations = 0
     rejected_tools: set[str] = set()  # tool destructive yang ditolak user
+    done_sigs: set[str] = set()  # signature tool call yang sudah selesai OK (dedup)
 
     # phase tanpa tool terdaftar → selesaikan otomatis (mis. scope_validation, cleanup)
     while True:
@@ -489,6 +515,19 @@ def _run_phase(run_id: str, phase: str, target: dict, template_name: str) -> Non
             write_event(run_id, phase, "phase_complete", {"phase": phase, "reason": reason})
             return
 
+        # --- dedup hard: tool+param identik yang sudah selesai → tolak, AI harus
+        # pilih param/host lain atau mark_phase_complete (bug: nuclei 3x weeb
+        # identik, AI loop walau prompt bilang jangan ulangi) ---
+        sig = _tool_sig(tool_id, params)
+        if sig in done_sigs:
+            write_event(run_id, phase, "tool_skipped", {
+                "tool": tool_id, "reason": "duplikat persis — pemanggilan identik "
+                "sudah selesai OK di phase ini; pilih parameter/host berbeda "
+                "atau mark_phase_complete",
+            })
+            tool_calls += 1
+            continue
+
         # --- 3. eksekusi tool pilihan AI (guardrail 9 tetap divalidasi runner) ---
         tool_def = registry.get(tool_id)
         if tool_def is None or phase not in tool_def.get("valid_phases", []):
@@ -545,6 +584,8 @@ def _run_phase(run_id: str, phase: str, target: dict, template_name: str) -> Non
 
         if not result.get("ok"):
             continue
+
+        done_sigs.add(sig)  # dedup: tool+param ini sudah jalan OK
 
         # persist artefak (mis. subfinder hosts) → dipakai tool berikutnya
         _persist_artifacts(run_id, tool_id, result)
