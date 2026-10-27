@@ -77,5 +77,6 @@ if (!$isSuperadmin) {
   <div class="sidebar-footer">
     <span class="sf-logo mono">OGES</span>
     <span class="sf-tag">AUTOMATED OFFENSIVE OPS</span>
+    <span class="sf-deco" aria-hidden="true">ネットワーク・シールド</span>
   </div>
 </aside>

@@ -46,6 +46,11 @@ foreach ($notifRows as $nrow) {
 $notifCount = count($notifItems);
 ?>
 <header class="topbar">
+  <button class="sidebar-toggle" type="button" aria-label="Buka menu navigasi" aria-expanded="false" aria-controls="app-sidebar">
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+      <path d="M3 5h18M3 12h18M3 19h18"/>
+    </svg>
+  </button>
   <div class="topbar-brand">
     <span class="logo-shield" aria-hidden="true">
       <svg viewBox="0 0 32 32" width="22" height="22">

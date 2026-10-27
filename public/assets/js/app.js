@@ -5,6 +5,36 @@
   "use strict";
 
   /* ---------- Dropdown (notif + user menu) — Phase 6 ---------- */
+    function initSidebarDrawer() {
+    // responsive ≤1024px: sidebar jadi drawer (hamburger toggle)
+    var sb = document.getElementById("sidebar");
+    var bd = document.getElementById("sidebar-backdrop");
+    var tg = document.querySelector(".sidebar-toggle");
+    if (!sb || !tg || !bd) return;
+    var close = function () {
+      sb.classList.remove("open");
+      bd.classList.remove("show");
+      tg.setAttribute("aria-expanded", "false");
+    };
+    tg.addEventListener("click", function (e) {
+      e.stopPropagation();
+      var open = sb.classList.toggle("open");
+      bd.classList.toggle("show", open);
+      tg.setAttribute("aria-expanded", open ? "true" : "false");
+    });
+    bd.addEventListener("click", close);
+    // klik item nav → tutup drawer (mobile UX)
+    sb.querySelectorAll(".nav-item").forEach(function (a) {
+      a.addEventListener("click", function () {
+        if (window.innerWidth <= 1024) close();
+      });
+    });
+    // resize besar lagi → pastikan drawer tertutup
+    window.addEventListener("resize", function () {
+      if (window.innerWidth > 1024) close();
+    });
+  }
+
   function initDropdowns() {
     var btns = document.querySelectorAll("[data-dropdown]");
     btns.forEach(function (btn) {
@@ -704,6 +734,7 @@
   function bootOnce() {
     boot();
     initSpaNav();
+    initSidebarDrawer();
   }
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", bootOnce);

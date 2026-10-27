@@ -1,0 +1,99 @@
+/* ==========================================================================
+   OGES-SHIELD — responsive (Phase 6 nice-to-have).
+   Breakpoint: 1280 (grid turun), 1024 (sidebar drawer + topbar ringkas),
+   768 (1 kolom + stat scroll), 480 (kompat: font kecil).
+   ========================================================================== */
+
+/* ---------- ≤1280px : grid panel 1 kolom, stats 2 ---------- */
+@media (max-width: 1280px) {
+  .app-main { padding: var(--sp-4); }
+  .grid-2col { grid-template-columns: 1fr; }
+  .grid-stats { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* ---------- ≤1024px : sidebar jadi drawer + topbar ringkas ---------- */
+@media (max-width: 1024px) {
+  :root { --sidebar-w: 232px; }
+  .app-shell { padding-left: 0; }
+  .sidebar {
+    transform: translateX(-100%);
+    transition: transform 0.22s ease;
+    box-shadow: 24px 0 48px rgba(0, 0, 0, 0.5);
+  }
+  .sidebar.open { transform: translateX(0); }
+  .sidebar-backdrop {
+    display: none;
+    position: fixed;
+    inset: var(--topbar-h) 0 0 0;
+    background: rgba(4, 6, 11, 0.6);
+    backdrop-filter: blur(2px);
+    z-index: calc(var(--z-sidebar) - 1);
+  }
+  .sidebar-backdrop.show { display: block; }
+
+  /* tombol hamburger (hidden ≥1024) */
+  .sidebar-toggle {
+    display: grid;
+    place-items: center;
+    width: 34px; height: 34px;
+    border-radius: var(--r-md);
+    border: 1px solid var(--border-subtle);
+    background: var(--bg-panel);
+    color: var(--text-secondary);
+    cursor: pointer;
+    flex: none;
+  }
+  .sidebar-toggle:hover { color: var(--accent-cyan); border-color: var(--accent-cyan-2); }
+  .sidebar-toggle[aria-expanded="true"] { color: var(--accent-cyan); border-color: rgba(34, 211, 238, 0.4); }
+
+  /* topbar: sembunyikan blok opsional biar muat */
+  .topbar-block.hide-md { display: none; }
+  .brand-tag { display: none; }
+  .topbar-block { min-width: 0; }
+}
+
+/* ≥1025px: hamburger & backdrop tidak muncul */
+@media (min-width: 1025px) {
+  .sidebar-toggle { display: none; }
+  .sidebar-backdrop { display: none !important; }
+}
+
+/* ---------- ≤768px : 1 kolom penuh + table scroll ---------- */
+@media (max-width: 768px) {
+  .app-main { padding: var(--sp-3); }
+  .grid-stats { grid-template-columns: repeat(2, 1fr); gap: var(--sp-2); }
+  .stat-card { padding: 10px 12px; }
+  .stat-value { font-size: 20px; }
+
+  .phase-picker { grid-template-columns: 1fr; }
+  .page-head { flex-direction: column; align-items: flex-start; gap: var(--sp-2); }
+  .page-head-actions { flex-wrap: wrap; }
+
+  /* tabel: scroll horizontal, jangan remuk kolom */
+  .panel-body { overflow-x: auto; }
+  table { min-width: 560px; }
+  .data-table td, .data-table th { padding: 8px 10px; }
+
+  /* terminal/ailog jangan terlalu tinggi di layar kecil */
+  .terminal, .ailog { max-height: 320px; }
+
+  /* topbar lebih tinggi utk 2 baris konten chip */
+  .topbar { gap: var(--sp-2); }
+  .user-chip { padding: 2px 6px; }
+  .avatar { width: 24px; height: 24px; font-size: 9px; }
+  .engagement-chip { padding: 3px 8px; }
+  .engagement-chip .tb-sub { display: none; }
+  .dropdown-menu { min-width: 240px; max-width: calc(100vw - 24px); }
+}
+
+/* ---------- ≤480px : kompat HP ---------- */
+@media (max-width: 480px) {
+  .grid-stats { grid-template-columns: 1fr 1fr; }
+  .stat-card { flex-direction: row; align-items: center; }
+  .app-main { padding: var(--sp-2); }
+  .panel-body { padding: var(--sp-3); }
+  .brand-name { font-size: 13px; letter-spacing: 0.06em; }
+  .topbar-brand { min-width: 0; }
+  .topbar-block.hide-sm { display: none; }
+  .user-meta { display: none; }  /* avatar doang, hemat ruang */
+}
